@@ -1,7 +1,7 @@
 // Маршруты приложения: игровой цикл целиком живёт на одном экране
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSessionStore } from '@/entities/game/session-store';
-import { RolePage } from '@/features/auth/RolePage';
+import { LoginPage } from '@/features/auth/LoginPage';
 import { GamePage } from '@/features/game/GamePage';
 import { LeaderboardPage } from '@/features/leaderboard/LeaderboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -14,7 +14,7 @@ export function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<RolePage />} />
+      <Route path="/" element={<LoginPage />} />
       <Route path="/game" element={user ? <GamePage /> : <Navigate to="/" replace />} />
       <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/" replace />} />
       <Route

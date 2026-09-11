@@ -1,108 +1,147 @@
-// Единая точка подмены источника данных: мок-бэкенд или реальный Java-сервис
+// Единая точка доступа к данным: реальный бэкенд там, где он готов, иначе мок
 
-import axios from 'axios';
 import type {
   BetRequest,
   CashoutResult,
   GameConfig,
-  Profile,
-  Tournament,
   HistoryEntry,
   LeaderboardEntry,
+  Profile,
   RoundResult,
   RoundStart,
+  Tournament,
   User,
 } from '@/shared/api/contract';
 import {
-  cashoutResultSchema,
   gameConfigSchema,
+  leaderboardEntrySchema,
   profileSchema,
   tournamentSchema,
-  historyEntrySchema,
-  leaderboardEntrySchema,
-  roundResultSchema,
-  roundStartSchema,
-  userSchema,
 } from '@/shared/api/contract';
+import {
+  authResponseSchema,
+  backendUserSchema,
+  cashoutResponseSchema,
+  historyItemSchema,
+  roundStartResponseSchema,
+  toHistoryEntry,
+  toRoundStart,
+  toUser,
+} from '@/shared/api/backend-contract';
+import { clearToken, saveToken } from '@/shared/api/auth-token';
+import { http, USE_MOCK } from '@/shared/api/http';
+import { buildLevelMultipliers } from '@/shared/lib/crash-math';
+import { DEFAULT_CONFIG } from '@/shared/config/default-config';
 import * as mock from '@/shared/api/mock-server';
 
-const USE_MOCK = import.meta.env['VITE_API_MODE'] !== 'real';
+export interface Credentials {
+  login: string;
+  password: string;
+}
 
-const http = axios.create({
-  baseURL: import.meta.env['VITE_API_URL'] ?? '/api',
-  withCredentials: true,
-});
+export interface RegisterData extends Credentials {
+  username: string;
+  email: string;
+}
 
 export const api = {
-  async login(userId: string): Promise<User> {
-    if (USE_MOCK) return mock.mockLogin(userId);
-    const { data } = await http.post('/auth/login', { userId });
-    return userSchema.parse(data);
+  isMock: USE_MOCK,
+
+  async login(credentials: Credentials): Promise<User> {
+    if (USE_MOCK) return mock.mockLogin(credentials.login);
+    const { data } = await http.post('/auth/login', credentials);
+    const parsed = authResponseSchema.parse(data);
+    saveToken(parsed.token);
+    return toUser(parsed.user);
+  },
+
+  async register(form: RegisterData): Promise<User> {
+    if (USE_MOCK) return mock.mockLogin('user');
+    const { data } = await http.post('/auth/register', {
+      username: form.username,
+      email: form.email,
+      password: form.password,
+    });
+    const parsed = authResponseSchema.parse(data);
+    saveToken(parsed.token);
+    return toUser(parsed.user);
   },
 
   async getCurrentUser(): Promise<User | null> {
     if (USE_MOCK) return mock.mockGetCurrentUser();
-    const { data } = await http.get('/auth/me');
-    return data ? userSchema.parse(data) : null;
+    try {
+      const { data } = await http.get('/auth/me');
+      return toUser(backendUserSchema.parse(data));
+    } catch {
+      return null;
+    }
   },
 
   async logout(): Promise<void> {
     if (USE_MOCK) return mock.mockLogout();
-    await http.post('/auth/logout');
-  },
-
-  async getProfile(playerId?: string): Promise<Profile> {
-    if (USE_MOCK) return mock.mockGetProfile(playerId);
-    const path = playerId ? `/users/${playerId}/profile` : '/users/me/profile';
-    const { data } = await http.get(path);
-    return profileSchema.parse(data);
-  },
-
-  async getTournament(): Promise<Tournament> {
-    if (USE_MOCK) return mock.mockGetTournament();
-    const { data } = await http.get('/tournament');
-    return tournamentSchema.parse(data);
-  },
-
-  async getConfig(): Promise<GameConfig> {
-    if (USE_MOCK) return mock.mockGetConfig();
-    const { data } = await http.get('/admin/config');
-    return gameConfigSchema.parse(data);
-  },
-
-  async saveConfig(config: GameConfig): Promise<GameConfig> {
-    if (USE_MOCK) return mock.mockSaveConfig(config);
-    const { data } = await http.put('/admin/config', config);
-    return gameConfigSchema.parse(data);
-  },
-
-  async getHistory(): Promise<HistoryEntry[]> {
-    if (USE_MOCK) return mock.mockGetHistory();
-    const { data } = await http.get('/rounds/history');
-    return historyEntrySchema.array().parse(data);
-  },
-
-  async getLeaderboard(): Promise<LeaderboardEntry[]> {
-    if (USE_MOCK) return mock.mockGetLeaderboard();
-    const { data } = await http.get('/tournament/leaderboard');
-    return leaderboardEntrySchema.array().parse(data);
+    clearToken();
   },
 
   async startRound(request: BetRequest): Promise<RoundStart> {
     if (USE_MOCK) return mock.mockStartRound(request);
-    const { data } = await http.post('/rounds', request);
-    return roundStartSchema.parse(data);
+    const { data } = await http.post('/game/start', {
+      theme: request.theme,
+      cost: request.cost,
+      boosterTier: request.boosterTier,
+    });
+    const parsed = roundStartResponseSchema.parse(data);
+    return toRoundStart(parsed, request.theme, buildLevelMultipliers(request.theme, DEFAULT_CONFIG));
   },
 
-  async cashout(multiplier: number, boosterActivated: boolean): Promise<CashoutResult> {
+  async cashout(
+    multiplier: number,
+    boosterActivated: boolean,
+    roundId?: string,
+  ): Promise<CashoutResult> {
     if (USE_MOCK) return mock.mockCashout(multiplier, boosterActivated);
-    const { data } = await http.post('/rounds/cashout', { multiplier, boosterActivated });
-    return cashoutResultSchema.parse(data);
+    const { data } = await http.post('/game/cashout', { roundId });
+    const parsed = cashoutResponseSchema.parse(data);
+    return {
+      roundId: parsed.roundId,
+      multiplier: parsed.multiplier,
+      payout: parsed.winAmount,
+      balance: parsed.newBalance,
+    };
   },
 
   async finishRound(boosterActivated: boolean): Promise<RoundResult> {
-    if (USE_MOCK) return mock.mockFinishRound(boosterActivated);
-    const { data } = await http.post('/rounds/finish', { boosterActivated });
-    return roundResultSchema.parse(data);
+    // На реальном бэкенде итоги приходят по WebSocket, отдельного вызова нет
+    return mock.mockFinishRound(boosterActivated);
+  },
+
+  async getHistory(): Promise<HistoryEntry[]> {
+    if (USE_MOCK) return mock.mockGetHistory();
+    const { data } = await http.get('/game/history');
+    const rows = Array.isArray(data) ? data : ((data as { items?: unknown[] }).items ?? []);
+    return historyItemSchema.array().parse(rows).map(toHistoryEntry).slice(0, 20);
+  },
+
+  async getProfile(playerId?: string): Promise<Profile> {
+    if (USE_MOCK) return mock.mockGetProfile(playerId);
+    const { data } = await http.get(playerId ? `/users/${playerId}` : '/users/me');
+    const user = toUser(backendUserSchema.parse(data));
+    return profileSchema.parse({ ...mock.mockGetProfile(), user });
+  },
+
+  // Ниже — то, чего на бэкенде пока нет: работает на моке
+  async getConfig(): Promise<GameConfig> {
+    return gameConfigSchema.parse(mock.mockGetConfig());
+  },
+
+  async saveConfig(config: GameConfig): Promise<GameConfig> {
+    return gameConfigSchema.parse(mock.mockSaveConfig(config));
+  },
+
+  async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
+  },
+
+  async getTournament(): Promise<Tournament> {
+    return tournamentSchema.parse(mock.mockGetTournament());
   },
 };

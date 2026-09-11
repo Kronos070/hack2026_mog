@@ -10,6 +10,9 @@ import { useRoundStore } from '@/entities/game/round-store';
 import { useSessionStore } from '@/entities/game/session-store';
 import { useAchievementStore } from '@/entities/game/achievement-store';
 import { useFlightEngine } from '@/features/flight/use-flight-engine';
+import { useSocketFlight } from '@/features/flight/use-socket-flight';
+import type { SocketMessage } from '@/features/flight/game-socket';
+import { buildRoundResult } from '@/features/flight/build-round-result';
 import { soundManager } from '@/shared/lib/sound-manager';
 
 export function useRoundController() {
@@ -24,6 +27,7 @@ export function useRoundController() {
   const [boosterHit, setBoosterHit] = useState(false);
   const [starting, setStarting] = useState(false);
   const boosterRef = useRef(false);
+  const cashoutRef = useRef<number | null>(null);
 
   const { data: config } = useQuery({ queryKey: ['config'], queryFn: () => api.getConfig() });
 
@@ -56,11 +60,36 @@ export function useRoundController() {
       .catch(() => toast.error('Ошибка завершения раунда'));
   }, [finishRound, refreshUser, queryClient, pushAchievements]);
 
-  const { getSnapshot, markCashout } = useFlightEngine(round, config, {
+  const handleSocketCrash = useCallback(
+    (message: SocketMessage) => {
+      const active = useRoundStore.getState().round;
+      if (!active) return;
+      finishRound(buildRoundResult(active, message, cashoutRef.current));
+      void refreshUser();
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
+    },
+    [finishRound, refreshUser, queryClient],
+  );
+
+  const handleSocketCashout = useCallback((message: SocketMessage) => {
+    if (typeof message.multiplier === 'number') cashoutRef.current = message.multiplier;
+  }, []);
+
+  const localFlight = useFlightEngine(api.isMock ? round : null, config, {
     onLevel: handleLevel,
     onBooster: handleBooster,
     onCrash: handleCrash,
   });
+
+  const socketFlight = useSocketFlight(api.isMock ? null : round, {
+    onLevel: handleLevel,
+    onBooster: handleBooster,
+    onCrash: handleSocketCrash,
+    onCashout: handleSocketCashout,
+  });
+
+  const getSnapshot = api.isMock ? localFlight.getSnapshot : socketFlight.getSnapshot;
+  const markCashout = localFlight.markCashout;
 
   const start = useCallback(
     async (theme: Theme, cost: number, boosterTier: BoosterTier): Promise<void> => {
@@ -71,6 +100,7 @@ export function useRoundController() {
         setCashedOut(false);
         setBoosterHit(false);
         boosterRef.current = false;
+        cashoutRef.current = null;
         startRound(started);
         await refreshUser();
         soundManager.play('select', 0.6);
@@ -89,13 +119,14 @@ export function useRoundController() {
     markCashout();
     setCashedOut(true);
     try {
-      const payout = await api.cashout(multiplier, boosterRef.current);
+      const payout = await api.cashout(multiplier, boosterRef.current, round?.roundId);
+      cashoutRef.current = payout.multiplier;
       soundManager.play('cashout', 0.8);
       toast.success(`Забрано ${payout.payout} бонусов · могли бы забрать больше`);
     } catch {
       toast.error('Не удалось зафиксировать выигрыш');
     }
-  }, [cashedOut, canCashout, getSnapshot, markCashout]);
+  }, [cashedOut, canCashout, getSnapshot, markCashout, round]);
 
   return {
     phase,

@@ -1,7 +1,6 @@
-// Панель ставки: тема, сумма и бустер; блокируется на время активного раунда
+// Панель ставки: тема, сумма и бустер в одной горизонтали
 
 import { LEVELS_BY_THEME, type BoosterTier, type Theme } from '@/shared/api/contract';
-import { Button } from '@/shared/ui/Button';
 import { BetAmountField } from '@/features/bet/BetAmountField';
 import { BoosterPicker } from '@/features/bet/BoosterPicker';
 import { cn } from '@/shared/lib/cn';
@@ -13,10 +12,8 @@ interface BetPanelProps {
   balance: number;
   multipliers: readonly number[];
   locked: boolean;
-  starting: boolean;
   onThemeChange: (theme: Theme) => void;
   onBetChange: (cost: number, tier: BoosterTier) => void;
-  onStart: () => void;
 }
 
 export function BetPanel({
@@ -26,19 +23,20 @@ export function BetPanel({
   balance,
   multipliers,
   locked,
-  starting,
   onThemeChange,
   onBetChange,
-  onStart,
 }: BetPanelProps) {
-  // Собирает параметры ставки и запускает раунд
-  const canStart = !locked && betCost >= 1 && betCost <= balance;
-
+  // Собирает параметры ставки для предстоящего раунда
   return (
-    <div className={cn('transition-opacity', locked && 'pointer-events-none opacity-50')}>
+    <div
+      className={cn(
+        'grid gap-5 transition-opacity lg:grid-cols-3',
+        locked && 'pointer-events-none opacity-50',
+      )}
+    >
       <section>
         <h2 className="text-sm font-semibold text-muted">Тема</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 grid gap-2">
           {(['green', 'red'] as Theme[]).map((item) => (
             <button
               key={item}
@@ -55,7 +53,7 @@ export function BetPanel({
         </div>
       </section>
 
-      <section className="mt-5">
+      <section>
         <h2 className="text-sm font-semibold text-muted">Ставка</h2>
         <div className="mt-2">
           <BetAmountField
@@ -67,7 +65,7 @@ export function BetPanel({
         </div>
       </section>
 
-      <section className="mt-5">
+      <section>
         <h2 className="text-sm font-semibold text-muted">Бустер</h2>
         <div className="mt-2">
           <BoosterPicker
@@ -78,12 +76,6 @@ export function BetPanel({
           />
         </div>
       </section>
-
-      <div className="mt-5">
-        <Button disabled={!canStart || starting} onClick={onStart}>
-          {starting ? 'Запуск…' : 'Начать'}
-        </Button>
-      </div>
     </div>
   );
 }

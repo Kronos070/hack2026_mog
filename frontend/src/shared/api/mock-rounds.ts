@@ -1,6 +1,7 @@
 // Мок-логика раунда: старт, фиксация выигрыша и подведение итогов
 
 import type {
+  Achievement,
   BetRequest,
   CashoutResult,
   RoundResult,
@@ -9,6 +10,7 @@ import type {
 } from '@/shared/api/contract';
 import { LEVELS_BY_THEME } from '@/shared/api/contract';
 import { readState, updateState } from '@/shared/api/mock-store';
+import { buildAchievements, evaluateAchievements } from '@/shared/api/mock-achievements';
 import { PUZZLE_PIECES, PUZZLE_TOTAL } from '@/shared/config/default-config';
 import {
   buildLevelMultipliers,
@@ -106,10 +108,25 @@ export function mockFinishRound(boosterActivated: boolean): RoundResult {
   const payout =
     round.cashoutMultiplier === null ? 0 : Math.round(round.betCost * round.cashoutMultiplier);
 
+  const unlockedNow: Achievement[] = [];
+
   const state = updateState((draft) => {
     if (!draft.currentUserId) return;
     const target = draft.users[draft.currentUserId];
     if (target) target.points += points;
+
+    draft.stats.roundsPlayed += 1;
+    draft.stats.totalWagered += round.betCost;
+    draft.stats.maxBet = Math.max(draft.stats.maxBet, round.betCost);
+    if (activated) draft.stats.boostersActivated += 1;
+    if (round.cashoutMultiplier !== null) {
+      draft.stats.roundsWon += 1;
+      draft.stats.totalPayout += payout;
+      draft.stats.bestMultiplier = Math.max(
+        draft.stats.bestMultiplier,
+        round.cashoutMultiplier,
+      );
+    }
 
     if (draft.puzzle.length < PUZZLE_TOTAL) {
       const next = PUZZLE_PIECES[draft.puzzle.length];
@@ -127,6 +144,14 @@ export function mockFinishRound(boosterActivated: boolean): RoundResult {
       finishedAt: Date.now(),
     });
     draft.history = draft.history.slice(0, 50);
+
+    const puzzleSize = draft.puzzle.length;
+    for (const id of evaluateAchievements(draft.stats, puzzleSize)) {
+      if (draft.unlocked[id]) continue;
+      draft.unlocked[id] = Date.now();
+      const full = buildAchievements(draft.unlocked).find((item) => item.id === id);
+      if (full) unlockedNow.push(full);
+    }
   });
 
   const user = state.currentUserId ? state.users[state.currentUserId] : null;
@@ -153,6 +178,7 @@ export function mockFinishRound(boosterActivated: boolean): RoundResult {
     reward,
     balance: user?.balance ?? 0,
     finishedAt: Date.now(),
+    unlockedAchievements: unlockedNow,
   };
 }
 

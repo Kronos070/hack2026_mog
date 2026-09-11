@@ -8,6 +8,7 @@ import { api } from '@/shared/api/client';
 import type { BoosterTier, Theme } from '@/shared/api/contract';
 import { useRoundStore } from '@/entities/game/round-store';
 import { useSessionStore } from '@/entities/game/session-store';
+import { useAchievementStore } from '@/entities/game/achievement-store';
 import { useFlightEngine } from '@/features/flight/use-flight-engine';
 import { soundManager } from '@/shared/lib/sound-manager';
 
@@ -15,6 +16,7 @@ export function useRoundController() {
   // Держит весь игровой цикл в одном экране, переключая фазы
   const queryClient = useQueryClient();
   const setUser = useSessionStore((state) => state.setUser);
+  const pushAchievements = useAchievementStore((state) => state.push);
   const { phase, round, result, startRound, finishRound, resetToIdle } = useRoundStore();
 
   const [canCashout, setCanCashout] = useState(false);
@@ -45,11 +47,14 @@ export function useRoundController() {
       .finishRound(boosterRef.current)
       .then(async (roundResult) => {
         finishRound(roundResult);
+        if (roundResult.unlockedAchievements.length > 0) {
+          pushAchievements(roundResult.unlockedAchievements);
+        }
         await refreshUser();
         void queryClient.invalidateQueries({ queryKey: ['history'] });
       })
       .catch(() => toast.error('Ошибка завершения раунда'));
-  }, [finishRound, refreshUser, queryClient]);
+  }, [finishRound, refreshUser, queryClient, pushAchievements]);
 
   const { getSnapshot, markCashout } = useFlightEngine(round, config, {
     onLevel: handleLevel,

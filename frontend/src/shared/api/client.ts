@@ -5,6 +5,8 @@ import type {
   BetRequest,
   CashoutResult,
   GameConfig,
+  Profile,
+  Tournament,
   HistoryEntry,
   LeaderboardEntry,
   RoundResult,
@@ -14,6 +16,8 @@ import type {
 import {
   cashoutResultSchema,
   gameConfigSchema,
+  profileSchema,
+  tournamentSchema,
   historyEntrySchema,
   leaderboardEntrySchema,
   roundResultSchema,
@@ -45,6 +49,19 @@ export const api = {
   async logout(): Promise<void> {
     if (USE_MOCK) return mock.mockLogout();
     await http.post('/auth/logout');
+  },
+
+  async getProfile(playerId?: string): Promise<Profile> {
+    if (USE_MOCK) return mock.mockGetProfile(playerId);
+    const path = playerId ? `/users/${playerId}/profile` : '/users/me/profile';
+    const { data } = await http.get(path);
+    return profileSchema.parse(data);
+  },
+
+  async getTournament(): Promise<Tournament> {
+    if (USE_MOCK) return mock.mockGetTournament();
+    const { data } = await http.get('/tournament');
+    return tournamentSchema.parse(data);
   },
 
   async getConfig(): Promise<GameConfig> {

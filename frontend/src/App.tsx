@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { AppRoutes } from '@/app/routes';
+import { AchievementToast } from '@/features/profile/AchievementToast';
 import { soundManager } from '@/shared/lib/sound-manager';
 
 const queryClient = new QueryClient({
@@ -20,6 +21,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AppRoutes />
+        <AchievementToast />
         <Toaster position="top-center" richColors />
       </BrowserRouter>
     </QueryClientProvider>

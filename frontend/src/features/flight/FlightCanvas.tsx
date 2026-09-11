@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { RoundStart, Theme } from '@/shared/api/contract';
 import { SceneRenderer } from '@/features/flight/scene-renderer';
+import { useThemeStore } from '@/entities/game/theme-store';
 import type { FlightSnapshot } from '@/features/flight/use-flight-engine';
 
 interface FlightCanvasProps {
@@ -17,6 +18,7 @@ export function FlightCanvas({ round = null, levels, theme, getSnapshot }: Fligh
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const snapshotRef = useRef(getSnapshot);
   snapshotRef.current = getSnapshot;
+  const scheme = useThemeStore((state) => state.scheme);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,7 +55,7 @@ export function FlightCanvas({ round = null, levels, theme, getSnapshot }: Fligh
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [round, levels, theme]);
+  }, [round, levels, theme, scheme]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" />;
 }

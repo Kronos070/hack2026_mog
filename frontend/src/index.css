@@ -2,13 +2,75 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0a0a0a;
-  --color-paper: #ffffff;
-  --color-muted: #6b7280;
-  --color-line: #e5e7eb;
-  --color-green-theme: #16a34a;
-  --color-red-theme: #dc2626;
-  --color-gold: #eab308;
+  --breakpoint-xs: 26rem;
+  --color-ink: var(--c-ink);
+  --color-paper: var(--c-paper);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-surface: var(--c-surface);
+  --color-green-theme: var(--c-green);
+  --color-red-theme: var(--c-red);
+  --color-gold: var(--c-gold);
+  --color-crash-low: var(--c-crash-low);
+  --color-crash-warm: var(--c-crash-warm);
+  --color-crash-amber: var(--c-crash-amber);
+  --color-crash-high: var(--c-crash-high);
+  --color-crash-gold: var(--c-crash-gold);
+}
+
+:root {
+  --c-ink: #0a0a0a;
+  --c-paper: #ffffff;
+  --c-muted: #6b7280;
+  --c-line: #e5e7eb;
+  --c-surface: #fafafa;
+  --c-green: #16a34a;
+  --c-red: #dc2626;
+  --c-gold: #eab308;
+  --c-crash-low: #dc2626;
+  --c-crash-warm: #f97316;
+  --c-crash-amber: #d97706;
+  --c-crash-high: #16a34a;
+  --c-crash-gold: #15803d;
+
+  /* Цвета сцены */
+  --c-scene-sky: #fafafa;
+  --c-scene-line: #e5e7eb;
+  --c-scene-line-passed: #0a0a0a;
+  --c-scene-label: #9ca3af;
+  --c-scene-cloud: #e5e7eb;
+  --c-scene-bird: #6b7280;
+  --c-scene-ground: #eef2ee;
+  --c-scene-tree-pine: #9cb89c;
+  --c-scene-tree-round: #aac4a6;
+  --c-scene-trunk: #8d6e4a;
+}
+
+.dark {
+  --c-ink: #f4f4f5;
+  --c-paper: #0e1116;
+  --c-muted: #94a3b8;
+  --c-line: #273042;
+  --c-surface: #161b24;
+  --c-green: #22c55e;
+  --c-red: #ef4444;
+  --c-gold: #facc15;
+  --c-crash-low: #f87171;
+  --c-crash-warm: #fb923c;
+  --c-crash-amber: #fbbf24;
+  --c-crash-high: #4ade80;
+  --c-crash-gold: #22c55e;
+
+  --c-scene-sky: #121722;
+  --c-scene-line: #273042;
+  --c-scene-line-passed: #e2e8f0;
+  --c-scene-label: #64748b;
+  --c-scene-cloud: #1e293b;
+  --c-scene-bird: #64748b;
+  --c-scene-ground: #16241c;
+  --c-scene-tree-pine: #2f5741;
+  --c-scene-tree-round: #35614a;
+  --c-scene-trunk: #4a3b2a;
 }
 
 @layer base {
@@ -19,14 +81,31 @@
 
   body {
     margin: 0;
+    color-scheme: light;
+    transition: background-color 0.2s ease, color 0.2s ease;
     background: var(--color-paper);
     color: var(--color-ink);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     overscroll-behavior: none;
   }
 
+  .dark body {
+    color-scheme: dark;
+  }
+
   button {
     font: inherit;
+  }
+}
+
+@keyframes achievement-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 

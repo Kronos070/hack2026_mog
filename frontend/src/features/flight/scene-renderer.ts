@@ -3,8 +3,10 @@
 import type { RoundStart, Theme } from '@/shared/api/contract';
 import type { FlightSnapshot } from '@/features/flight/use-flight-engine';
 import { SkyLayer } from '@/features/flight/sky-layer';
+import { GroundLayer } from '@/features/flight/ground-layer';
+import { readScenePalette, type ScenePalette } from '@/features/flight/scene-palette';
 
-const BALLOON_BOTTOM = 76;
+const BALLOON_BOTTOM = 104;
 
 export interface SceneSetup {
   round: RoundStart | null;
@@ -14,6 +16,8 @@ export interface SceneSetup {
 
 export class SceneRenderer {
   private readonly sky = new SkyLayer();
+  private readonly ground = new GroundLayer();
+  private palette: ScenePalette = readScenePalette();
   private particles: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   private width = 0;
   private height = 0;
@@ -31,6 +35,10 @@ export class SceneRenderer {
     this.accent = scene.theme === 'red' ? '#dc2626' : '#16a34a';
   }
 
+  refreshPalette(): void {
+    this.palette = readScenePalette();
+  }
+
   resize(width: number, height: number): void {
     this.width = width;
     this.height = height;
@@ -40,10 +48,11 @@ export class SceneRenderer {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);
 
-    this.ctx.fillStyle = '#fafafa';
+    this.ctx.fillStyle = this.palette.sky;
     this.ctx.fillRect(0, 0, width, height);
-    this.sky.update(deltaMs, width);
-    this.sky.draw(this.ctx);
+    this.sky.update(deltaMs, width, height);
+    this.sky.draw(this.ctx, this.palette);
+    this.ground.draw(this.ctx, width, height, this.palette);
 
     this.drawLevels(snapshot);
 
@@ -76,14 +85,14 @@ export class SceneRenderer {
       const y = height - ((index + 1) / (count + 1)) * height;
       const passed = (snapshot?.levelsPassed ?? 0) > index;
 
-      ctx.strokeStyle = passed ? '#0a0a0a' : '#e5e7eb';
+      ctx.strokeStyle = passed ? this.palette.linePassed : this.palette.line;
       ctx.lineWidth = passed ? 1.5 : 1;
       ctx.beginPath();
       ctx.moveTo(48, y);
       ctx.lineTo(width - 16, y);
       ctx.stroke();
 
-      ctx.fillStyle = passed ? '#0a0a0a' : '#9ca3af';
+      ctx.fillStyle = passed ? this.palette.linePassed : this.palette.label;
       ctx.fillText(`x${levels[index]?.toFixed(2) ?? '-'}`, 6, y);
 
       if (this.round?.boosterLevel === index + 1) {
@@ -118,7 +127,7 @@ export class SceneRenderer {
     ctx.save();
     ctx.translate(width / 2 + sway, y);
 
-    ctx.strokeStyle = '#9ca3af';
+    ctx.strokeStyle = this.palette.label;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(-8, 26);
@@ -137,7 +146,7 @@ export class SceneRenderer {
     ctx.ellipse(-7, -8, 6, 11, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#78350f';
+    ctx.fillStyle = this.palette.trunk;
     ctx.fillRect(-8, 40, 16, 12);
 
     ctx.restore();

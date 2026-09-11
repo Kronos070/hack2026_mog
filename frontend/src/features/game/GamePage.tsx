@@ -1,28 +1,28 @@
 // Единый игровой экран: ставка, полёт и итоги без перехода между страницами
 
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { LEVELS_BY_THEME } from '@/shared/api/contract';
+import { LEVELS_BY_THEME, type BoosterTier } from '@/shared/api/contract';
 import { buildLevelMultipliers } from '@/shared/lib/crash-math';
 import { DEFAULT_CONFIG } from '@/shared/config/default-config';
 import { useSessionStore } from '@/entities/game/session-store';
 import { useRoundController } from '@/features/flight/use-round-controller';
 import { GameLayout } from '@/shared/ui/GameLayout';
-import { Button } from '@/shared/ui/Button';
 import { Modal } from '@/shared/ui/Modal';
-import { Placeholder } from '@/shared/ui/Placeholder';
 import { HistoryList } from '@/features/history/HistoryList';
+import { CrashHistory } from '@/features/history/CrashHistory';
+import { TournamentTable } from '@/features/tournament/TournamentTable';
 import { RulesContent } from '@/features/bet/RulesContent';
 import { BetPanel } from '@/features/bet/BetPanel';
+import { ActionBar } from '@/features/bet/ActionBar';
 import { FlightOverlay } from '@/features/flight/FlightOverlay';
 import { ResultPanel } from '@/features/results/ResultPanel';
 
 export function GamePage() {
   // Управляет всеми фазами раунда в пределах одного экрана
-  const navigate = useNavigate();
-  const { user, theme, betCost, boosterTier, setTheme, setBet } = useSessionStore();
+  const { user, theme, betCost, boosterTier, lastBet, setTheme, setBet, rememberBet } =
+    useSessionStore();
   const [rulesOpen, setRulesOpen] = useState(false);
 
   const controller = useRoundController();
@@ -37,6 +37,11 @@ export function GamePage() {
   const multipliers = config?.boosterTierValues ?? [1, 2, 3, 4];
   const flying = phase === 'flying';
 
+  const startRound = (cost: number, tier: BoosterTier): void => {
+    rememberBet(cost, tier);
+    void controller.start(theme, cost, tier);
+  };
+
   const levels = useMemo(
     () => buildLevelMultipliers(theme, config ?? DEFAULT_CONFIG),
     [theme, config],
@@ -44,6 +49,7 @@ export function GamePage() {
 
   return (
     <GameLayout
+      onOpenRules={() => setRulesOpen(true)}
       round={round}
       levels={levels}
       theme={round?.theme ?? theme}
@@ -53,13 +59,11 @@ export function GamePage() {
           <FlightOverlay
             round={round}
             getSnapshot={getSnapshot}
-            canCashout={controller.canCashout}
-            cashedOut={controller.cashedOut}
             boosterHit={controller.boosterHit}
-            onCashout={() => void controller.cashout()}
           />
         ) : null
       }
+      stickyBelow={<CrashHistory entries={history} />}
       scenePanel={
         <p className="border-t border-line px-3 py-2 text-center text-xs text-muted">
           {flying && `Полёт · ${round?.levelCount ?? 0} уровней`}
@@ -68,58 +72,59 @@ export function GamePage() {
         </p>
       }
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-        <div>
-          <h1 className="text-xl font-bold">Воздушный Шар</h1>
-          <p className="text-sm text-muted">
-            Баланс: <span className="font-semibold text-ink">{balance}</span> бонусов
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={flying} onClick={() => setRulesOpen(true)}>
-            Правила
-          </Button>
-          <Button variant="ghost" disabled={flying} onClick={() => navigate('/')}>
-            Сменить роль
-          </Button>
-        </div>
-      </header>
+      <div className="mt-6">
+        <BetPanel
+          theme={theme}
+          betCost={betCost}
+          boosterTier={boosterTier}
+          balance={balance}
+          multipliers={multipliers}
+          locked={flying}
+          onThemeChange={setTheme}
+          onBetChange={setBet}
+        />
+      </div>
 
-      {phase === 'finished' && result ? (
+      <div className="mt-6">
+        <ActionBar
+          flying={flying}
+          starting={controller.starting}
+          canStart={betCost >= 1 && betCost <= balance}
+          canCashout={controller.canCashout}
+          cashedOut={controller.cashedOut}
+          hasLastBet={lastBet !== null}
+          onStart={() => startRound(betCost, boosterTier)}
+          onCashout={() => void controller.cashout()}
+          onRepeat={() => {
+            if (!lastBet) return;
+            setBet(lastBet.cost, lastBet.tier);
+            startRound(lastBet.cost, lastBet.tier);
+          }}
+          onExpress={() => {
+            const cost = betCost >= 1 ? betCost : Math.min(25, balance);
+            setBet(cost, boosterTier);
+            startRound(cost, boosterTier);
+          }}
+        />
+      </div>
+
+      {phase === 'finished' && result && (
         <div className="mt-6">
           <ResultPanel result={result} onPlayAgain={controller.playAgain} />
         </div>
-      ) : (
-        <>
-          <div className="mt-6">
-            <Placeholder title="Живой рейтинг" note="Заглушка — дополнительная возможность" />
-          </div>
-
-          <div className="mt-6">
-            <BetPanel
-              theme={theme}
-              betCost={betCost}
-              boosterTier={boosterTier}
-              balance={balance}
-              multipliers={multipliers}
-              locked={flying}
-              starting={controller.starting}
-              onThemeChange={setTheme}
-              onBetChange={setBet}
-              onStart={() => void controller.start(theme, betCost, boosterTier)}
-            />
-          </div>
-        </>
       )}
 
-      <section className="mt-7">
-        <h2 className="text-sm font-semibold text-muted">История игр</h2>
-        <HistoryList entries={history} />
-      </section>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <Placeholder title="Турнирная таблица" note="Заглушка — дополнительная возможность" />
-        <Placeholder title="Экран выбора темы" note="Заглушка — дополнительная возможность" />
+      <div className="mt-7 grid gap-5 lg:grid-cols-2">
+        <section>
+          <h2 className="text-sm font-semibold text-muted">История игр</h2>
+          <HistoryList entries={history} />
+        </section>
+        <section>
+          <h2 className="text-sm font-semibold text-muted">Турнирная таблица</h2>
+          <div className="mt-2">
+            <TournamentTable />
+          </div>
+        </section>
       </div>
 
       <Modal open={rulesOpen} title="Правила игры" onClose={() => setRulesOpen(false)}>

@@ -67,6 +67,14 @@ export const rewardSchema = z.object({
   total: z.number().int().positive(),
 });
 
+export const achievementSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  letter: z.string(),
+  unlockedAt: z.number().int().nullable(),
+});
+
 export const roundResultSchema = z.object({
   roundId: z.string(),
   theme: themeSchema,
@@ -80,6 +88,7 @@ export const roundResultSchema = z.object({
   reward: rewardSchema,
   balance: z.number().nonnegative(),
   finishedAt: z.number().int(),
+  unlockedAchievements: z.array(achievementSchema).default([]),
 });
 
 export const historyEntrySchema = z.object({
@@ -97,6 +106,43 @@ export const leaderboardEntrySchema = z.object({
   playerId: z.string(),
   playerName: z.string(),
   points: z.number().nonnegative(),
+});
+
+export const rankSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  minProfit: z.number(),
+  nextTitle: z.string().nullable(),
+  nextAt: z.number().nullable(),
+  profit: z.number(),
+});
+
+export const profileSchema = z.object({
+  user: userSchema,
+  puzzle: z.array(z.string()),
+  puzzleTotal: z.number().int().positive(),
+  roundsPlayed: z.number().int().nonnegative(),
+  roundsWon: z.number().int().nonnegative(),
+  bestMultiplier: z.number().nonnegative(),
+  totalWagered: z.number().nonnegative(),
+  totalPayout: z.number().nonnegative(),
+  rank: rankSchema,
+  achievements: z.array(achievementSchema),
+});
+
+export const tournamentEntrySchema = z.object({
+  place: z.number().int().positive(),
+  playerId: z.string(),
+  playerName: z.string(),
+  points: z.number().nonnegative(),
+  prize: z.number().nonnegative(),
+});
+
+export const tournamentSchema = z.object({
+  title: z.string(),
+  endsAt: z.number().int(),
+  entries: z.array(tournamentEntrySchema),
+  currentPlayerId: z.string().nullable(),
 });
 
 export const gameConfigSchema = z.object({
@@ -133,3 +179,8 @@ export type RoundResult = z.infer<typeof roundResultSchema>;
 export type HistoryEntry = z.infer<typeof historyEntrySchema>;
 export type LeaderboardEntry = z.infer<typeof leaderboardEntrySchema>;
 export type GameConfig = z.infer<typeof gameConfigSchema>;
+export type Profile = z.infer<typeof profileSchema>;
+export type Achievement = z.infer<typeof achievementSchema>;
+export type Rank = z.infer<typeof rankSchema>;
+export type TournamentEntry = z.infer<typeof tournamentEntrySchema>;
+export type Tournament = z.infer<typeof tournamentSchema>;

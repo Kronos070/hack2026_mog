@@ -19,7 +19,7 @@ export function BoosterPicker({
 }: BoosterPickerProps) {
   // Переключает множитель бустера для следующего раунда
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
       {TIERS.map((tier) => {
         const multiplier = multipliers[tier - 1] ?? 1;
         return (

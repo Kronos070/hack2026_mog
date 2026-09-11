@@ -155,8 +155,8 @@ public class GameWebSocket {
                             ? crashResolution.levelsPassed()
                             : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
                     boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
-
-                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster));
+                    Long newBalance = crashResolution != null ? crashResolution.newBalance() : null;
+                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance));
                     break;
                 }
 

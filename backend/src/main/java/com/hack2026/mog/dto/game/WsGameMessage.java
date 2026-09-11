@@ -60,8 +60,12 @@ public record WsGameMessage(
         return cashout(roundId, multiplier, winAmount, newBalance, null, null, null);
     }
 
+    public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated, Long newBalance) {
+        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, newBalance, elapsedMs, "Balloon crashed!", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
+    }
+
     public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated) {
-        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, null, elapsedMs, "Balloon crashed!", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
+        return crashed(roundId, crashMultiplier, elapsedMs, pointsEarned, levelsPassed, boosterActivated, null);
     }
 
     public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs) {

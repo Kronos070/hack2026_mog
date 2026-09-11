@@ -40,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @ApplicationScoped
 public class GameService {
 
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(GameService.class);
+
     /**
      * Константа экспоненциального роста множителя в секунду: M(t) = 1.00 * e^(GROWTH_RATE * t).
      * При k = 0.06 множитель 2.0x достигается за ~11.55 сек.
@@ -196,6 +198,7 @@ public class GameService {
                 unlockMultiplier
         );
         activeRounds.put(userId, activeRound);
+        LOG.infof("Round started: roundId=%s, userId=%d, bet=%d, theme=%s, booster=x%d", roundId, userId, betAmount, theme, boosterMult);
 
         return new GameRoundStartResult(
                 roundId,
@@ -351,6 +354,9 @@ public class GameService {
         // Удаляем из in-memory кэша
         activeRounds.remove(userId);
 
+        LOG.infof("Cashout success: roundId=%s, userId=%d, mult=%.2fx, win=%d, points=%d, newBalance=%d",
+                activeRound.roundId(), userId, currentMultiplier, winAmount, pointsEarned, user.getBonusBalance());
+
         return new GameRoundCashoutResult(
                 activeRound.roundId(),
                 GameRound.STATUS_FINISHED,
@@ -499,6 +505,9 @@ public class GameService {
 
         // Удаляем из памяти
         activeRounds.remove(activeRound.userId());
+
+        LOG.infof("Round crashed: roundId=%s, userId=%d, crashMult=%.2fx, points=%d",
+                activeRound.roundId(), activeRound.userId(), finalCrashMultiplier, pointsEarned);
 
         long balance = user != null ? user.getBonusBalance() : 0L;
 

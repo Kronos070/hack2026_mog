@@ -59,12 +59,17 @@
 - ✅ Математика краха и маржи (`CrashGenerator`, `HouseEdgeCalculator`).
 - ✅ Таблицы базы данных в Flyway (`users`, `game_rounds`, `game_configs`, `tournament_entries`).
 - ✅ Аутентификация игроков по JWT.
+- ✅ `GameService` — внутренний авторитетный сервис: жизненный цикл одиночного раунда (`startRound`, `cashout`, `checkRoundState`), пассивный timestamp-расчет множителя $M(t) = 1.00 \cdot e^{k \cdot t}$.
+- ✅ Динамический персональный House Edge игрока в таблице `users` (`current_house_edge`, `last_bet_amount`) с автоматическим обновлением по формулам Столото.
+- ✅ Сущность `GameRound`, репозиторий `GameRoundRepository`, миграция `V1.0.2__add_game_lifecycle_fields.sql`.
+- ✅ Representation Layer: REST API [`GameResource`](../src/main/java/com/hack2026/mog/resources/GameResource.java) (`/api/game/start`, `/api/game/cashout`, `/api/game/state`, `/api/game/history`, `/api/game/house-edge`).
+- ✅ Representation Layer: WebSocket [`GameWebSocket`](../src/main/java/com/hack2026/mog/websocket/GameWebSocket.java) (`/ws/game?token=...`) на Quarkus WebSockets Next с push-стримингом тиков на виртуальных потоках 60 FPS до момента краха.
 
 **В процессе / Осталось (Pending):**
-- ⏳ Java Records для WebSocket протокола (типа `TickMessage`, `CrashMessage`).
-- ⏳ `GameLoopService` с in-memory состоянием полета шара.
-- ⏳ WebSocket endpoint `/ws/game` (Quarkus WebSockets Next).
-- ⏳ Списание и начисление баланса при ставке и cashout.
+- ⏳ Турнирный скоринг и начисление очков в `tournament_entries` (`TournamentService`, живой рейтинг).
+- ⏳ Механика бустеров (будет внедрена на следующей итерации).
+- ⏳ Админ-панель изменения конфигурации (`GameConfigResource`).
 
 **Первый шаг новой сессии (Next Step):**
-> Создать пакет `com.hack2026.mog.dto.game` с рекордами WebSocket-сообщений (`GameTickDto`, `RoundStatusDto`, `BetDto`) и набросать скелет `GameLoopService`.
+> Реализовать турнирный скоринг (`TournamentService` и REST/WS эндпоинты живого рейтинга).
+

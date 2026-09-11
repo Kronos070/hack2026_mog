@@ -142,3 +142,23 @@ docker compose up --build
 | `JWT_SECRET` | Секретный ключ для подписи токенов | `dev-jwt-secret-key-must-be-at-least-256-bits-long!` |
 | `QUARKUS_HTTP_PORT` | Порт HTTP/WebSocket сервера | `8080` |
 | `GAME_DEV_SEED` | Опциональный seed для детерминированного тестирования краха | *(пусто)* |
+
+---
+
+## 8. Handoff-Driven Development (HDD) Workflow
+
+В репозитории развернута облегченная система спецификаций и передачи контекста для ускорения разработки на хакатоне.
+
+### Золотые правила для AI-агентов:
+1. **Перед началом любой задачи:**
+   - Открой карту [specs/specs-map.md](specs/specs-map.md) и индекс [specs/TRACKS.md](specs/TRACKS.md).
+   - Загрузи handoff текущего трека (например, [specs/handoff-game-core.md](specs/handoff-game-core.md)).
+   - Загружай в контекст **только** файлы из списка «Что загрузить». Не загружай файлы из «Anti-List».
+2. **В процессе работы:**
+   - Строго уважай раздел «Не перерешивать (Locked Decisions)» — не ломай и не переписывай принятые архитектурные решения.
+   - Если код изменен, но спеку обновить некогда — выставь ей статус `stale` в первой строке: `Статус: as-built / stale · сверено: YYYY-MM-DD`.
+3. **В конце сессии / задачи:**
+   - Обнови статус задачи в `handoff-<track>.md` (Done / Pending / Next Step) и строку в `specs/TRACKS.md`.
+   - Если задача из `specs/backlog.md` выполнена — перенеси ее в `specs/backlog-resolved.md` с кратким решением.
+   - Запусти `python3 specs/audit.py` для быстрой проверки целостности ссылок.
+

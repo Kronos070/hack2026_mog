@@ -1,0 +1,51 @@
+{
+  "languages": {
+    "Java": {
+      "language_servers": [
+        "jdtls",
+        "!java"
+      ],
+      "tab_size": 4,
+      "show_completion_documentation": true,
+      "format_on_save": "on"
+    }
+  },
+  "lsp": {
+    "jdtls": {
+      "settings": {
+        "java_home": "/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home",
+        "lombok_support": false
+      },
+      "initialization_options": {
+        "workspaceFolders": [
+          "file:///Users/kenny/Work/hack2026_mog/backend"
+        ],
+        "settings": {
+          "java": {
+            "home": "/Library/Java/JavaVirtualMachines/temurin-26.jdk/Contents/Home",
+            "autobuild": {
+              "enabled": true
+            },
+            "configuration": {
+              "updateBuildConfiguration": "automatic"
+            },
+            "import": {
+              "maven": {
+                "enabled": true
+              }
+            },
+            "completion": {
+              "enabled": true,
+              "guessMethodArguments": "insertParameterNames"
+            },
+            "errors": {
+              "incompleteClasspath": {
+                "severity": "warning"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

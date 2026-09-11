@@ -122,7 +122,10 @@ public class GameResource {
                         null,
                         0L,
                         0L,
-                        null
+                        null,
+                        0,
+                        0,
+                        false
                 )).build();
             }
         }

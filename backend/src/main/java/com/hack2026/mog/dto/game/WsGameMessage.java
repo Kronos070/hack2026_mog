@@ -19,14 +19,17 @@ public record WsGameMessage(
         Integer level,
         Integer boosterMultiplier,
         Double previousMultiplier,
-        Integer bonusPoints
+        Integer bonusPoints,
+        Integer pointsEarned,
+        Integer levelsPassed,
+        Boolean boosterActivated
 ) {
     public static WsGameMessage connected(Long userId, String username) {
-        return new WsGameMessage("CONNECTED", null, null, null, null, null, null, "Connected to game stream: " + username, null, null, null, null);
+        return new WsGameMessage("CONNECTED", null, null, null, null, null, null, "Connected to game stream: " + username, null, null, null, null, null, null, null);
     }
 
     public static WsGameMessage tick(UUID roundId, double multiplier, long elapsedMs) {
-        return new WsGameMessage("TICK", roundId, multiplier, null, null, null, elapsedMs, null, null, null, null, null);
+        return new WsGameMessage("TICK", roundId, multiplier, null, null, null, elapsedMs, null, null, null, null, null, null, null, null);
     }
 
     public static WsGameMessage boosterActivated(int level, int boosterMultiplier, double previousMultiplier, double currentMultiplier, int bonusPoints) {
@@ -42,23 +45,34 @@ public record WsGameMessage(
                 level,
                 boosterMultiplier,
                 previousMultiplier,
-                bonusPoints
+                bonusPoints,
+                null,
+                null,
+                true
         );
     }
 
+    public static WsGameMessage cashout(UUID roundId, double multiplier, long winAmount, long newBalance, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated) {
+        return new WsGameMessage("CASHOUT", roundId, multiplier, null, winAmount, newBalance, null, "Cashout successful", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
+    }
+
     public static WsGameMessage cashout(UUID roundId, double multiplier, long winAmount, long newBalance) {
-        return new WsGameMessage("CASHOUT", roundId, multiplier, null, winAmount, newBalance, null, "Cashout successful", null, null, null, null);
+        return cashout(roundId, multiplier, winAmount, newBalance, null, null, null);
+    }
+
+    public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated) {
+        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, null, elapsedMs, "Balloon crashed!", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
     }
 
     public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs) {
-        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, null, elapsedMs, "Balloon crashed!", null, null, null, null);
+        return crashed(roundId, crashMultiplier, elapsedMs, 0, 0, false);
     }
 
     public static WsGameMessage error(String message) {
-        return new WsGameMessage("ERROR", null, null, null, null, null, null, message, null, null, null, null);
+        return new WsGameMessage("ERROR", null, null, null, null, null, null, message, null, null, null, null, null, null, null);
     }
 
     public static WsGameMessage pong() {
-        return new WsGameMessage("PONG", null, null, null, null, null, null, "PONG", null, null, null, null);
+        return new WsGameMessage("PONG", null, null, null, null, null, null, "PONG", null, null, null, null, null, null, null);
     }
 }

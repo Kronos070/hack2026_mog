@@ -48,6 +48,9 @@ public class User {
     @Column(name = "last_bet_amount")
     private Long lastBetAmount;
 
+    @Column(name = "points", nullable = false)
+    private Long points = 0L;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -61,6 +64,7 @@ public class User {
         this.email = email;
         this.passwordHash = passwordHash;
         this.bonusBalance = 1000L;
+        this.points = 0L;
         this.role = "USER";
         this.currentHouseEdge = 0.04;
     }
@@ -76,6 +80,9 @@ public class User {
         }
         if (bonusBalance == null) {
             bonusBalance = 1000L;
+        }
+        if (points == null) {
+            points = 0L;
         }
         if (role == null) {
             role = "USER";
@@ -192,5 +199,13 @@ public class User {
 
     public void setLastBetAmount(Long lastBetAmount) {
         this.lastBetAmount = lastBetAmount;
+    }
+
+    public Long getPoints() {
+        return points != null ? points : 0L;
+    }
+
+    public void setPoints(Long points) {
+        this.points = points != null ? points : 0L;
     }
 }

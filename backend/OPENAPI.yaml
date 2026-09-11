@@ -115,19 +115,33 @@ components:
           maxLength: 512
     StartRoundRequest:
       type: object
-      required:
-      - betAmount
       properties:
         betAmount:
           type: integer
           format: int64
           minimum: 1
+          example: 100
+        cost:
+          type: integer
+          format: int64
+          description: Алиас для betAmount (формат фронтенда)
+          example: 100
         theme:
           type: string
+          enum: [green, red]
+          default: green
         boosterMultiplier:
           type: integer
           format: int32
           minimum: 1
+          example: 2
+        boosterTier:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4
+          description: Алиас для boosterMultiplier (формат фронтенда)
+          example: 2
     TopUpBalanceRequest:
       type: object
       properties:
@@ -184,6 +198,9 @@ components:
         email:
           type: string
         bonusBalance:
+          type: integer
+          format: int64
+        points:
           type: integer
           format: int64
         firstName:

@@ -319,12 +319,13 @@ public class GameService {
         // Расчет выигрыша с учетом активированного бустера
         long winAmount = Math.round(activeRound.betAmount() * currentMultiplier);
 
-        // Начисление выигрыша на баланс
-        user.setBonusBalance(user.getBonusBalance() + winAmount);
-
         // Расчет заработанных игровых очков
         int passedLevels = GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseMultiplier);
         int pointsEarned = GameLevelConfig.calculatePoints(passedLevels, true, boosterActivated, activeRound.boosterMultiplier());
+
+        // Начисление выигрыша и очков на баланс
+        user.setBonusBalance(user.getBonusBalance() + winAmount);
+        user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
 
         // Обновление персонального House Edge игрока (выигрыш)
         RoundOutcome winOutcome = RoundOutcome.win(
@@ -359,6 +360,8 @@ public class GameService {
                 winAmount,
                 user.getBonusBalance(),
                 pointsEarned,
+                passedLevels,
+                boosterActivated,
                 activeRound.boosterMultiplier(),
                 nextHe,
                 activeRound.serverSeed(),
@@ -381,16 +384,19 @@ public class GameService {
         if (activeRound != null && activeRound.roundId().equals(roundId)) {
             if (activeRound.isExpiredAt(now)) {
                 // Автоматически завершаем крашем
-                resolveCrash(activeRound, now);
+                GameRoundCashoutResult cr = resolveCrash(activeRound, now);
                 return new GameRoundStateResult(
                         roundId,
                         GameRound.STATUS_CRASHED,
                         true,
-                        activeRound.crashMultiplier(),
-                        activeRound.crashMultiplier(),
+                        cr.crashMultiplier(),
+                        cr.crashMultiplier(),
                         Duration.between(activeRound.startTime(), activeRound.crashTime()).toMillis(),
                         0L,
-                        activeRound.startTime()
+                        activeRound.startTime(),
+                        cr.levelsPassed(),
+                        cr.pointsEarned(),
+                        cr.boosterActivated()
                 );
             }
 
@@ -399,6 +405,8 @@ public class GameService {
             );
             long elapsedMs = Math.max(0, Duration.between(activeRound.startTime(), now).toMillis());
             long potentialWin = Math.round(activeRound.betAmount() * currentMultiplier);
+            int passedLevels = GameLevelConfig.calculatePassedLevels(activeRound.theme(), currentMultiplier);
+            int currentPoints = GameLevelConfig.calculatePoints(passedLevels, false, activeRound.isBoosterActivated(), activeRound.boosterMultiplier());
 
             return new GameRoundStateResult(
                     roundId,
@@ -408,7 +416,10 @@ public class GameService {
                     null, // Скрываем множитель краха до окончания раунда
                     elapsedMs,
                     potentialWin,
-                    activeRound.startTime()
+                    activeRound.startTime(),
+                    passedLevels,
+                    currentPoints,
+                    activeRound.isBoosterActivated()
             );
         }
 
@@ -424,6 +435,8 @@ public class GameService {
         long elapsedMs = dbRound.getEndTime() != null && dbRound.getStartTime() != null
                 ? Duration.between(dbRound.getStartTime(), dbRound.getEndTime()).toMillis()
                 : 0L;
+        int passedLevels = GameLevelConfig.calculatePassedLevels(dbRound.getTheme(), mult);
+        boolean boosterAct = dbRound.getBoosterMultiplier() != null && dbRound.getBoosterMultiplier() > 1;
 
         return new GameRoundStateResult(
                 roundId,
@@ -433,7 +446,10 @@ public class GameService {
                 dbRound.getCrashMultiplier(),
                 elapsedMs,
                 dbRound.getWinAmount(),
-                dbRound.getStartTime()
+                dbRound.getStartTime(),
+                passedLevels,
+                dbRound.getPointsEarned(),
+                boosterAct
         );
     }
 
@@ -468,6 +484,7 @@ public class GameService {
         if (user != null) {
             user.setCurrentHouseEdge(nextHe);
             user.setLastBetAmount(activeRound.betAmount());
+            user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
         }
 
         // Обновляем запись в БД
@@ -494,6 +511,8 @@ public class GameService {
                 0L,
                 balance,
                 pointsEarned,
+                passedLevels,
+                boosterActivated,
                 activeRound.boosterMultiplier(),
                 nextHe,
                 activeRound.serverSeed(),
@@ -510,6 +529,12 @@ public class GameService {
         double nextHe = houseEdgeCalculator.calculateNextHouseEdge(round.getHouseEdge(), lossOutcome);
         user.setCurrentHouseEdge(nextHe);
         user.setLastBetAmount(round.getBetAmount());
+
+        int passedLevels = GameLevelConfig.calculatePassedLevels(round.getTheme(), round.getCrashMultiplier());
+        boolean wasBooster = round.getBoosterMultiplier() != null && round.getBoosterMultiplier() > 1;
+        int pointsEarned = GameLevelConfig.calculatePoints(passedLevels, false, wasBooster, round.getBoosterMultiplier() != null ? round.getBoosterMultiplier() : 1);
+        user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
+        round.setPointsEarned(pointsEarned);
 
         round.setStatus(GameRound.STATUS_CRASHED);
         round.setIsWin(false);

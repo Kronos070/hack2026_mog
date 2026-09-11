@@ -104,6 +104,7 @@
     "username": "super_player",
     "email": "player@stoloto.ru",
     "bonusBalance": 1000,
+    "points": 0,
     "firstName": "Иван",
     "lastName": "Иванов",
     "avatarUrl": "https://example.com/avatar.png",
@@ -117,6 +118,11 @@
   - `400 Bad Request` — ошибка валидации полей.
   - `409 Conflict` — пользователь с таким `username` или `email` уже существует.
 
+> **Предустановленный администратор для тестирования админки:**
+> - **Username:** `admin` (или email: `admin@stoloto.ru`)
+> - **Password:** `admin123`
+> - **Role:** `ADMIN` (баланс: 50 000 бонусов, 5 000 очков)
+
 ---
 
 #### `POST /api/auth/login`
@@ -128,7 +134,7 @@
   "password": "strongPassword123"
 }
 ```
-- **Ответ `200 OK` (`AuthResponse`):** Возвращает JWT токен и профиль пользователя (аналогично register).
+- **Ответ `200 OK` (`AuthResponse`):** Возвращает JWT токен и профиль пользователя (с полем `points`).
 - **Ошибки:**
   - `401 Unauthorized` — неверный логин или пароль.
 
@@ -137,7 +143,7 @@
 #### `GET /api/auth/me`
 Получить профиль текущего пользователя из контекста токена.
 - **Headers:** `Authorization: Bearer <jwt_token>`
-- **Ответ `200 OK`:** Возвращает объект `UserProfileResponse`.
+- **Ответ `200 OK`:** Возвращает объект `UserProfileResponse` (включая `points`).
 - **Ошибки:**
   - `401 Unauthorized` — токен отсутствует, просрочен или поврежден.
 
@@ -255,9 +261,9 @@
 }
 ```
 *Параметры:*
-- `betAmount`: сумма ставки в бонусах ($\ge 1$, обязательно).
-- `theme`: тема игры `"green"` (9 уровней) или `"red"` (12 уровней). По умолчанию `"classic"` / `"green"`.
-- `boosterMultiplier`: множитель бустера `1` (без бустера), `2`, `3` или `4`.
+- `betAmount` (или алиас `cost`): сумма ставки в бонусах ($\ge 1$, по умолчанию 100).
+- `theme`: тема игры `"green"` (по умолчанию, 9 уровней) или `"red"` (12 уровней).
+- `boosterMultiplier` (или алиас `boosterTier`): множитель бустера `1` (тир 1, без бустера), `2` (тир 2), `3` (тир 3) или `4` (тир 4).
 
 - **Ответ `201 Created` (`GameRoundStartResult`):**
 ```json
@@ -298,7 +304,7 @@
    - Если шар до момента кэшаута успел долететь до уровня бустера, текущий множитель умножается на `boosterMultiplier`.
    - Начисляется выигрыш: `winAmount = round(betAmount * multiplier)`.
    - Баланс пользователя пополняется на `winAmount`.
-   - Рассчитываются игровые очки (за уровни + бустер + 50 очков за кэшаут).
+   - Рассчитываются игровые очки (за уровни + бустер + 50 очков за кэшаут) и начисляются на общий счет игрока `points`.
    - Динамический House Edge игрока обновляется (по формуле выигрыша).
    - Раунд в БД помечается `FINISHED`, `isWin = true`.
    - В открытый WebSocket пушится событие `CASHOUT`.
@@ -322,6 +328,8 @@
   "winAmount": 250,
   "newBalance": 1150,
   "pointsEarned": 90,
+  "levelsPassed": 4,
+  "boosterActivated": true,
   "boosterMultiplier": 1,
   "nextHouseEdge": 0.0425,
   "serverSeed": "a1b2c3d4e5f6...",
@@ -341,6 +349,8 @@
   "winAmount": 0,
   "newBalance": 900,
   "pointsEarned": 20,
+  "levelsPassed": 2,
+  "boosterActivated": false,
   "boosterMultiplier": 1,
   "nextHouseEdge": 0.0300,
   "serverSeed": "a1b2c3d4e5f6...",
@@ -370,7 +380,10 @@
   "crashMultiplier": null,
   "elapsedMs": 9200,
   "potentialWin": 174,
-  "startTime": "2026-09-12T00:15:00.000Z"
+  "startTime": "2026-09-12T00:15:00.000Z",
+  "levelsPassed": 2,
+  "pointsEarned": 20,
+  "boosterActivated": false
 }
 ```
 *Примечание:* До завершения раунда `crashMultiplier` возвращается как `null` во избежание считывания точки краха на стороне клиента.
@@ -507,6 +520,9 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
   "multiplier": 2.50,
   "winAmount": 250,
   "newBalance": 1150,
+  "pointsEarned": 90,
+  "levelsPassed": 4,
+  "boosterActivated": true,
   "message": "Cashout successful"
 }
 ```
@@ -521,10 +537,13 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
   "crashMultiplier": 3.80,
   "winAmount": 0,
   "elapsedMs": 14200,
+  "pointsEarned": 30,
+  "levelsPassed": 3,
+  "boosterActivated": false,
   "message": "Balloon crashed!"
 }
 ```
-После этого события клиент показывает финальный экран результатов (выигрыш или сгорание ставки).
+После этого события клиент показывает финальный экран результатов (выигрыш или сгорание ставки) со всеми заработанными очками и пройденными уровнями.
 
 #### 6. Ошибка `ERROR`
 ```json
@@ -596,6 +615,7 @@ export interface UserProfile {
   username: string;
   email: string;
   bonusBalance: number;
+  points: number;
   firstName?: string | null;
   lastName?: string | null;
   avatarUrl?: string | null;
@@ -619,9 +639,11 @@ export interface TopUpBalanceResponse {
 }
 
 export interface StartRoundRequest {
-  betAmount: number;
-  theme?: "green" | "red" | "classic";
+  betAmount?: number;
+  cost?: number; // алиас фронтенда для betAmount
+  theme?: "green" | "red";
   boosterMultiplier?: 1 | 2 | 3 | 4;
+  boosterTier?: 1 | 2 | 3 | 4; // алиас фронтенда для boosterMultiplier
 }
 
 export interface GameRoundStartResult {
@@ -651,6 +673,8 @@ export interface GameRoundCashoutResult {
   winAmount: number;
   newBalance: number;
   pointsEarned: number;
+  levelsPassed: number;
+  boosterActivated: boolean;
   boosterMultiplier: number;
   nextHouseEdge: number;
   serverSeed: string;
@@ -667,6 +691,9 @@ export interface GameRoundStateResult {
   elapsedMs: number;
   potentialWin: number;
   startTime: string | null;
+  levelsPassed: number;
+  pointsEarned: number;
+  boosterActivated: boolean;
 }
 
 export interface GameRoundHistoryItem {
@@ -715,6 +742,9 @@ export interface WsGameMessage {
   boosterMultiplier?: number | null;
   previousMultiplier?: number | null;
   bonusPoints?: number | null;
+  pointsEarned?: number | null;
+  levelsPassed?: number | null;
+  boosterActivated?: boolean | null;
 }
 ```
 

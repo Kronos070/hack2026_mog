@@ -14,6 +14,8 @@ public record GameRoundCashoutResult(
         Long winAmount,
         Long newBalance,
         Integer pointsEarned,
+        Integer levelsPassed,
+        Boolean boosterActivated,
         Integer boosterMultiplier,
         double nextHouseEdge,
         String serverSeed,

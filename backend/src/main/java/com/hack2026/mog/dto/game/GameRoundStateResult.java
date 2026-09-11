@@ -14,5 +14,8 @@ public record GameRoundStateResult(
         Double crashMultiplier,
         long elapsedMs,
         Long potentialWin,
-        Instant startTime
+        Instant startTime,
+        Integer levelsPassed,
+        Integer pointsEarned,
+        Boolean boosterActivated
 ) {}

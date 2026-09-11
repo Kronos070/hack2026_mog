@@ -5,6 +5,7 @@ import com.hack2026.mog.dto.game.ActiveGameRound;
 import com.hack2026.mog.dto.game.GameRoundCashoutResult;
 import com.hack2026.mog.dto.game.WsGameMessage;
 import com.hack2026.mog.math.CrashGenerator;
+import com.hack2026.mog.services.GameLevelConfig;
 import com.hack2026.mog.services.GameService;
 import com.hack2026.mog.services.SecurityService;
 import io.quarkus.websockets.next.OnClose;
@@ -141,7 +142,21 @@ public class GameWebSocket {
                     double finalCrashMultiplier = (boosterActivated || activeRound.isBoosterActivated())
                             ? CrashGenerator.floorTo2Decimals(baseCrashMultiplier * boosterMultiplier)
                             : baseCrashMultiplier;
-                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed));
+
+                    GameRoundCashoutResult crashResolution = null;
+                    if (!activeRound.isCashedOut()) {
+                        crashResolution = gameService.resolveCrash(activeRound, crashTime);
+                    }
+
+                    int pointsEarned = crashResolution != null && crashResolution.pointsEarned() != null
+                            ? crashResolution.pointsEarned()
+                            : 0;
+                    int passedLevels = crashResolution != null && crashResolution.levelsPassed() != null
+                            ? crashResolution.levelsPassed()
+                            : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
+                    boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
+
+                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster));
                     break;
                 }
 
@@ -179,8 +194,8 @@ public class GameWebSocket {
                         ? CrashGenerator.floorTo2Decimals(baseMultiplier * boosterMultiplier)
                         : baseMultiplier;
 
-                long elapsed = Math.max(0, Duration.between(startTime, now).toMillis());
-                sendJson(conn, WsGameMessage.tick(roundId, displayMultiplier, elapsed));
+                long elapsedMs = Math.max(0, Duration.between(startTime, now).toMillis());
+                sendJson(conn, WsGameMessage.tick(roundId, displayMultiplier, elapsedMs));
 
                 try {
                     Thread.sleep(TICK_INTERVAL_MS);
@@ -202,7 +217,10 @@ public class GameWebSocket {
                     result.roundId(),
                     result.multiplier(),
                     result.winAmount(),
-                    result.newBalance()
+                    result.newBalance(),
+                    result.pointsEarned(),
+                    result.levelsPassed(),
+                    result.boosterActivated()
             ));
         }
     }

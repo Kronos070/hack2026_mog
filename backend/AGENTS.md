@@ -109,6 +109,8 @@ backend/
    Использовать Jakarta Bean Validation аннотации (`@NotNull`, `@Size`, `@Min`, `@Max`) во всех входящих DTO.
 7. **Flyway Migrations:**
    Не создавать таблицы через `hibernate.orm.database.generation=update` в проде. Всегда писать SQL-миграции `V{Version}__{Description}.sql`.
+8. **Тесты:**
+   Тесты писать не нужно — в приоритете максимальная скорость разработки.
 
 ---
 

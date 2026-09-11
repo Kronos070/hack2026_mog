@@ -1,0 +1,327 @@
+---
+openapi: 3.1.0
+info:
+  description: REST API для бонусной crash-игры «Воздушный Шар» (Столото)
+  title: MOG Game Server API
+  version: 1.0.0
+components:
+  securitySchemes:
+    jwtAuth:
+      type: http
+      description: JWT Bearer токен авторизации
+      scheme: bearer
+      bearerFormat: JWT
+    SecurityScheme:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication
+  schemas:
+    ChangePasswordRequest:
+      type: object
+      required:
+      - oldPassword
+      - newPassword
+      properties:
+        oldPassword:
+          type: string
+          pattern: \S
+        newPassword:
+          type: string
+          minLength: 6
+          maxLength: 100
+          pattern: \S
+    Instant:
+      type: string
+      format: date-time
+      examples:
+      - 2022-03-10T16:15:50Z
+    LoginRequest:
+      type: object
+      required:
+      - login
+      - password
+      properties:
+        login:
+          type: string
+          pattern: \S
+        password:
+          type: string
+          pattern: \S
+    PageResponseUserProfileResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserProfileResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          $ref: "#/components/schemas/Instant"
+        message:
+          type: string
+    RegisterRequest:
+      type: object
+      required:
+      - username
+      - email
+      - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: \S
+        email:
+          type: string
+          maxLength: 128
+          pattern: \S
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+          pattern: \S
+        firstName:
+          type: string
+          maxLength: 64
+        lastName:
+          type: string
+          maxLength: 64
+        avatarUrl:
+          type: string
+          maxLength: 512
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+        email:
+          type: string
+          maxLength: 128
+        firstName:
+          type: string
+          maxLength: 64
+        lastName:
+          type: string
+          maxLength: 64
+        avatarUrl:
+          type: string
+          maxLength: 512
+    UserProfileResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+        bonusBalance:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        avatarUrl:
+          type: string
+        role:
+          type: string
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+        updatedAt:
+          $ref: "#/components/schemas/Instant"
+tags:
+- name: Authentication
+  description: Авторизация и регистрация пользователей через JWT Bearer токен
+- name: Users
+  description: Управление профилями пользователей (CRUD)
+paths:
+  /api/auth/login:
+    post:
+      summary: Вход в систему
+      description: "Аутентифицирует пользователя по логину (username или email) и\
+        \ паролю, возвращает JWT Bearer токен"
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/auth/me:
+    get:
+      summary: Получение текущего пользователя
+      description: Возвращает профиль аутентифицированного пользователя по переданному
+        Bearer токену
+      tags:
+      - Authentication
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+      security:
+      - jwtAuth: []
+  /api/auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      description: "Создает нового пользователя, возвращает профиль и JWT Bearer т\
+        окен"
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/ping:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PingResponse"
+      summary: Ping
+      tags:
+      - Ping Resource
+  /api/users:
+    get:
+      summary: Список пользователей
+      description: Возвращает пагинированный список пользователей
+      tags:
+      - Users
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageResponseUserProfileResponse"
+  /api/users/me:
+    put:
+      summary: Обновить собственный профиль
+      description: "Обновляет имя пользователя, email, имя, фамилию или аватар"
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+      security:
+      - jwtAuth: []
+    get:
+      summary: Получить собственный профиль
+      description: Возвращает данные профиля авторизованного пользователя
+      tags:
+      - Users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+      security:
+      - jwtAuth: []
+    delete:
+      summary: Удалить собственный аккаунт
+      description: Удаляет профиль авторизованного пользователя
+      tags:
+      - Users
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/users/me/password:
+    put:
+      summary: Сменить пароль
+      description: Изменяет пароль авторизованного пользователя с проверкой текущего
+        пароля
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/users/{id}:
+    get:
+      summary: Получить профиль пользователя по ID
+      description: Возвращает публичный профиль пользователя по его идентификатору
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"

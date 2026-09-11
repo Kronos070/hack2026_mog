@@ -35,6 +35,9 @@ public class GameRound {
     @Column(name = "booster_multiplier", nullable = false)
     private Integer boosterMultiplier = 1;
 
+    @Column(name = "booster_level")
+    private Integer boosterLevel;
+
     @Column(name = "crash_multiplier", nullable = false)
     private Double crashMultiplier;
 
@@ -270,6 +273,14 @@ public class GameRound {
 
     public void setHouseEdge(Double houseEdge) {
         this.houseEdge = houseEdge;
+    }
+
+    public Integer getBoosterLevel() {
+        return boosterLevel;
+    }
+
+    public void setBoosterLevel(Integer boosterLevel) {
+        this.boosterLevel = boosterLevel;
     }
 
     public Instant getCreatedAt() {

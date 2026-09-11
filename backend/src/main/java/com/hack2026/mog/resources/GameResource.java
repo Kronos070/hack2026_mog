@@ -59,6 +59,9 @@ public class GameResource {
     @Inject
     UserRepository userRepository;
 
+    @Inject
+    com.hack2026.mog.services.UserService userService;
+
     @POST
     @Path("/start")
     @Authenticated
@@ -72,13 +75,7 @@ public class GameResource {
         // Запуск WebSocket 60 FPS стрима для подключенного клиента
         ActiveGameRound activeRound = gameService.getActiveRounds().get(userId);
         if (activeRound != null) {
-            gameWebSocket.startFlightStream(
-                    userId,
-                    result.roundId(),
-                    activeRound.startTime(),
-                    activeRound.crashTime(),
-                    activeRound.crashMultiplier()
-            );
+            gameWebSocket.startFlightStream(userId, activeRound);
         }
 
         return Response.status(Response.Status.CREATED).entity(result).build();
@@ -222,5 +219,17 @@ public class GameResource {
                 round.getStatus(),
                 round.getCreatedAt()
         );
+    }
+
+    @POST
+    @Path("/top-up")
+    @Authenticated
+    @RunOnVirtualThread
+    @SecurityRequirement(name = "jwtAuth")
+    @Operation(summary = "Пополнить баланс бонусов игрока", description = "Пополняет баланс бонусов текущего игрока без ограничений (для тестирования)")
+    public Response topUpGameBalance(com.hack2026.mog.dto.TopUpBalanceRequest request) {
+        Long userId = securityService.getCurrentUserId();
+        com.hack2026.mog.dto.TopUpBalanceResponse response = userService.topUpBalance(userId, request != null ? request.amount() : null);
+        return Response.ok(response).build();
     }
 }

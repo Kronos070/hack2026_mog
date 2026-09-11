@@ -5,7 +5,7 @@ import java.util.UUID;
 
 /**
  * Результат запуска игрового раунда.
- * Содержит Provably Fair хэш (combined_hash), время старта и скорость роста для отрисовки кривой клиентом.
+ * Содержит Provably Fair хэш (combined_hash), время старта, параметры кривой и информацию о бустере и уровнях.
  * Значение crashMultiplier клиенту до завершения раунда НЕ передается.
  */
 public record GameRoundStartResult(
@@ -16,5 +16,8 @@ public record GameRoundStartResult(
         String provablyFairHash,
         Long betAmount,
         Integer boosterMultiplier,
+        Integer boosterLevel,
+        Integer totalLevels,
+        Double unlockCashoutMultiplier,
         Long remainingBalance
 ) {}

@@ -17,6 +17,13 @@ components:
       bearerFormat: JWT
       description: Authentication
   schemas:
+    CashoutRequest:
+      type: object
+      required:
+      - roundId
+      properties:
+        roundId:
+          $ref: "#/components/schemas/UUID"
     ChangePasswordRequest:
       type: object
       required:
@@ -106,6 +113,25 @@ components:
         avatarUrl:
           type: string
           maxLength: 512
+    StartRoundRequest:
+      type: object
+      required:
+      - betAmount
+      properties:
+        betAmount:
+          type: integer
+          format: int64
+          minimum: 1
+        theme:
+          type: string
+        boosterMultiplier:
+          type: integer
+          format: int32
+          minimum: 1
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
     UpdateProfileRequest:
       type: object
       properties:
@@ -153,6 +179,8 @@ components:
 tags:
 - name: Authentication
   description: Авторизация и регистрация пользователей через JWT Bearer токен
+- name: Game
+  description: Управление игровым циклом crash-игры «Воздушный Шар»
 - name: Users
   description: Управление профилями пользователей (CRUD)
 paths:
@@ -204,6 +232,101 @@ paths:
       responses:
         "200":
           description: OK
+  /api/game/cashout:
+    post:
+      summary: Забрать выигрыш (Cashout)
+      description: Фиксирует текущий множитель и начисляет выигрыш на баланс пользователя
+      tags:
+      - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashoutRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/history:
+    get:
+      summary: История завершенных игр
+      description: Возвращает историю раундов (глобальную или персональную с флагом
+        my=true)
+      tags:
+      - Game
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      - name: my
+        in: query
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: OK
+  /api/game/house-edge:
+    get:
+      summary: Получить персональный House Edge игрока
+      description: "Возвращает текущий HE, RTP и EV авторизованного пользователя"
+      tags:
+      - Game
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/house-edge/reset:
+    post:
+      summary: Сбросить персональный House Edge
+      description: Сбрасывает House Edge игрока к базовому значению 0.04 (для тестирования/демо)
+      tags:
+      - Game
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/start:
+    post:
+      summary: Начать новый раунд игры
+      description: "Списывает ставку с баланса игрока, генерирует Provably Fair кр\
+        ах и запускает полет"
+      tags:
+      - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartRoundRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/state:
+    get:
+      summary: Получить состояние раунда
+      description: Возвращает текущее состояние активного раунда пользователя
+      tags:
+      - Game
+      parameters:
+      - name: roundId
+        in: query
+        schema:
+          $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
   /api/ping:
     get:
       responses:

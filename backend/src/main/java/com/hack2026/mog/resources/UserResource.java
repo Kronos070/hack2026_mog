@@ -15,6 +15,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -101,5 +102,24 @@ public class UserResource {
         @QueryParam("size") @DefaultValue("20") int size
     ) {
         return userService.listUsers(page, size);
+    }
+
+    @POST
+    @Path("/me/top-up")
+    @Authenticated
+    @RunOnVirtualThread
+    @SecurityRequirement(name = "jwtAuth")
+    @Operation(summary = "Пополнить баланс бонусов текущего пользователя", description = "Добавляет бонусные баллы на баланс авторизованного пользователя без проверок (для тестирования)")
+    public com.hack2026.mog.dto.TopUpBalanceResponse topUpMyBalance(com.hack2026.mog.dto.TopUpBalanceRequest request) {
+        Long currentUserId = securityService.getCurrentUserId();
+        return userService.topUpBalance(currentUserId, request != null ? request.amount() : null);
+    }
+
+    @POST
+    @Path("/{id}/top-up")
+    @RunOnVirtualThread
+    @Operation(summary = "Пополнить баланс бонусов пользователя по ID", description = "Добавляет бонусные баллы на баланс пользователя по ID без проверок (для тестирования)")
+    public com.hack2026.mog.dto.TopUpBalanceResponse topUpBalanceById(@PathParam("id") Long id, com.hack2026.mog.dto.TopUpBalanceRequest request) {
+        return userService.topUpBalance(id, request != null ? request.amount() : null);
     }
 }

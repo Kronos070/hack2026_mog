@@ -72,16 +72,9 @@ public class GameWebSocket {
             LOG.infof("User connected to WebSocket game stream: id=%d, username=%s", userId, username);
             sendJson(connection, WsGameMessage.connected(userId, username));
 
-            // Если у пользователя уже идет активный раунд (например, при реконнекте) — запускаем стрим тиков
             ActiveGameRound activeRound = gameService.getActiveRounds().get(userId);
             if (activeRound != null && !activeRound.isExpiredAt(Instant.now())) {
-                startFlightStream(
-                        userId,
-                        activeRound.roundId(),
-                        activeRound.startTime(),
-                        activeRound.crashTime(),
-                        activeRound.crashMultiplier()
-                );
+                startFlightStream(userId, activeRound);
             }
         } catch (Exception e) {
             LOG.warnf("WebSocket connection authentication failed: %s", e.getMessage());
@@ -107,20 +100,37 @@ public class GameWebSocket {
     @OnTextMessage
     public void onMessage(WebSocketConnection connection, String text) {
         if ("PING".equalsIgnoreCase(text.trim())) {
-            sendJson(connection, new WsGameMessage("PONG", null, null, null, null, null, null, "PONG"));
+            sendJson(connection, WsGameMessage.pong());
         }
     }
 
     /**
      * Запуск push-стриминга тиков полета шара на виртуальном потоке (60 FPS).
+     * Отслеживает достижение уровня бустера и отправляет событие BOOSTER_ACTIVATED.
      * Шар летит до точки crashTime даже после cashout, как того требует CASE.md.
      */
-    public void startFlightStream(Long userId, UUID roundId, Instant startTime, Instant crashTime, double crashMultiplier) {
+    public void startFlightStream(Long userId, ActiveGameRound activeRound) {
+        if (activeRound == null) {
+            return;
+        }
+
         Thread.ofVirtual().name("ws-flight-" + userId).start(() -> {
             WebSocketConnection conn = userConnections.get(userId);
             if (conn == null || conn.isClosed()) {
                 return;
             }
+
+            UUID roundId = activeRound.roundId();
+            Instant startTime = activeRound.startTime();
+            Instant crashTime = activeRound.crashTime();
+            double baseCrashMultiplier = activeRound.crashMultiplier();
+
+            boolean hasBooster = activeRound.hasBooster();
+            int boosterMultiplier = activeRound.boosterMultiplier();
+            int boosterLevel = activeRound.boosterLevel() != null ? activeRound.boosterLevel() : 1;
+            double boosterThreshold = activeRound.boosterThreshold() != null ? activeRound.boosterThreshold() : Double.MAX_VALUE;
+
+            boolean boosterActivated = activeRound.isBoosterActivated();
 
             while (conn.isOpen()) {
                 Instant now = Instant.now();
@@ -128,17 +138,49 @@ public class GameWebSocket {
                 if (now.isAfter(crashTime) || now.equals(crashTime)) {
                     // Точка краха достигнута
                     long totalElapsed = Math.max(0, Duration.between(startTime, crashTime).toMillis());
-                    sendJson(conn, WsGameMessage.crashed(roundId, crashMultiplier, totalElapsed));
+                    double finalCrashMultiplier = (boosterActivated || activeRound.isBoosterActivated())
+                            ? CrashGenerator.floorTo2Decimals(baseCrashMultiplier * boosterMultiplier)
+                            : baseCrashMultiplier;
+                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed));
                     break;
                 }
 
-                // Текущий множитель по экспоненциальной формуле
-                double currentMultiplier = CrashGenerator.floorTo2Decimals(
-                        GameService.calculateMultiplierAt(startTime, now, GameService.DEFAULT_GROWTH_RATE)
-                );
-                long elapsed = Math.max(0, Duration.between(startTime, now).toMillis());
+                // Текущий базовый множитель по экспоненциальной формуле
+                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, GameService.DEFAULT_GROWTH_RATE);
+                double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
 
-                sendJson(conn, WsGameMessage.tick(roundId, currentMultiplier, elapsed));
+                // Проверка достижения уровня бустера
+                if (!boosterActivated && hasBooster && baseMultiplier >= boosterThreshold) {
+                    // По CASE.md бустер не активируется, если шар долетел до него уже после нажатия «Забрать»
+                    if (!activeRound.isCashedOut()) {
+                        if (activeRound.markBoosterActivated()) {
+                            boosterActivated = true;
+                            double previousMultiplier = baseMultiplier;
+                            double currentMultiplier = CrashGenerator.floorTo2Decimals(previousMultiplier * boosterMultiplier);
+                            int bonusPoints = boosterMultiplier * 10;
+
+                            LOG.infof("Booster activated for user %d: level=%d, mult=x%d, prev=%.2f, curr=%.2f, points=%d",
+                                    userId, boosterLevel, boosterMultiplier, previousMultiplier, currentMultiplier, bonusPoints);
+
+                            // Рассылка события BOOSTER_ACTIVATED в WebSocket
+                            sendJson(conn, WsGameMessage.boosterActivated(
+                                    boosterLevel,
+                                    boosterMultiplier,
+                                    previousMultiplier,
+                                    currentMultiplier,
+                                    bonusPoints
+                            ));
+                        }
+                    }
+                }
+
+                // Если бустер активен — отображаем увеличенный множитель
+                double displayMultiplier = (boosterActivated || activeRound.isBoosterActivated())
+                        ? CrashGenerator.floorTo2Decimals(baseMultiplier * boosterMultiplier)
+                        : baseMultiplier;
+
+                long elapsed = Math.max(0, Duration.between(startTime, now).toMillis());
+                sendJson(conn, WsGameMessage.tick(roundId, displayMultiplier, elapsed));
 
                 try {
                     Thread.sleep(TICK_INTERVAL_MS);

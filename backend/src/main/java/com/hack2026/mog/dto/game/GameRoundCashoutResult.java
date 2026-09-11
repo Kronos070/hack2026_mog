@@ -13,6 +13,8 @@ public record GameRoundCashoutResult(
         double crashMultiplier,
         Long winAmount,
         Long newBalance,
+        Integer pointsEarned,
+        Integer boosterMultiplier,
         double nextHouseEdge,
         String serverSeed,
         String clientSeed,

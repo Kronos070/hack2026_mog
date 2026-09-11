@@ -64,10 +64,10 @@
 - ✅ Сущность `GameRound`, репозиторий `GameRoundRepository`, миграция `V1.0.2__add_game_lifecycle_fields.sql`.
 - ✅ Representation Layer: REST API [`GameResource`](../src/main/java/com/hack2026/mog/resources/GameResource.java) (`/api/game/start`, `/api/game/cashout`, `/api/game/state`, `/api/game/history`, `/api/game/house-edge`).
 - ✅ Representation Layer: WebSocket [`GameWebSocket`](../src/main/java/com/hack2026/mog/websocket/GameWebSocket.java) (`/ws/game?token=...`) на Quarkus WebSockets Next с push-стримингом тиков на виртуальных потоках 60 FPS до момента краха.
+- ✅ Система бустеров и уровней (`GameLevelConfig`, миграция `V1.0.3__add_booster_level.sql`): поддержка зеленой (9 уровней) и красной (12 уровней) тем, блокировка cashout до 1-го уровня, Provably Fair размещение бустера, WebSocket событие `BOOSTER_ACTIVATED` с начислением очков.
 
 **В процессе / Осталось (Pending):**
 - ⏳ Турнирный скоринг и начисление очков в `tournament_entries` (`TournamentService`, живой рейтинг).
-- ⏳ Механика бустеров (будет внедрена на следующей итерации).
 - ⏳ Админ-панель изменения конфигурации (`GameConfigResource`).
 
 **Первый шаг новой сессии (Next Step):**

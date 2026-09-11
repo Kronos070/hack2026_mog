@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: dockerhub.timeweb.cloud/library/postgres:16-alpine
+    container_name: mog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mog_db
+      POSTGRES_USER: mog_user
+      POSTGRES_PASSWORD: mog_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mog_user -d mog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: mog-backend
+    restart: unless-stopped
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/mog_db
+      QUARKUS_DATASOURCE_USERNAME: mog_user
+      QUARKUS_DATASOURCE_PASSWORD: mog_pass
+      QUARKUS_HTTP_PORT: 8080
+      JWT_SECRET: dev-jwt-secret-key-must-be-at-least-256-bits-long!
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mog-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

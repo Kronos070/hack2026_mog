@@ -8,10 +8,10 @@ interface MultiplierDisplayProps {
 }
 
 const TIER_CLASSES = [
-  'text-ink',
-  'text-gold',
-  'text-gold drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]',
-  'text-gold drop-shadow-[0_0_18px_rgba(234,179,8,0.9)] scale-125',
+  'text-on-glass',
+  'text-accent',
+  'text-accent drop-shadow-[0_0_12px_rgba(245,179,36,0.8)]',
+  'text-accent drop-shadow-[0_0_18px_rgba(245,179,36,0.9)] scale-125',
 ];
 
 export function MultiplierDisplay({ getSnapshot }: MultiplierDisplayProps) {
@@ -31,7 +31,7 @@ export function MultiplierDisplay({ getSnapshot }: MultiplierDisplayProps) {
 
       const tier = Math.min(levelsPassed, TIER_CLASSES.length - 1);
       if (tier !== lastTier) {
-        node.className = `inline-block text-5xl font-bold tabular-nums transition-all duration-300 sm:text-6xl ${TIER_CLASSES[tier] ?? ''}`;
+        node.className = `inline-block text-4xl font-extrabold tabular-nums transition-all duration-300 sm:text-5xl ${TIER_CLASSES[tier] ?? ''}`;
         lastTier = tier;
       }
       frame = requestAnimationFrame(loop);
@@ -42,7 +42,7 @@ export function MultiplierDisplay({ getSnapshot }: MultiplierDisplayProps) {
   }, [getSnapshot]);
 
   return (
-    <span ref={nodeRef} className="inline-block text-5xl font-bold tabular-nums sm:text-6xl">
+    <span ref={nodeRef} className="inline-block text-4xl font-extrabold tabular-nums text-on-glass sm:text-5xl">
       x1.00
     </span>
   );

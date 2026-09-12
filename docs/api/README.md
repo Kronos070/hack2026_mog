@@ -98,3 +98,5 @@ sequenceDiagram
 5. 🏆 [**05. Турниры, Лидерборд и SSE-стримы**](./05-tournament-and-sse.md)
 6. ⚙️ [**06. Админка, House Edge и Provably Fair**](./06-admin-and-provably-fair.md)
 7. 📋 [**07. Шпаргалка TypeScript и справочник ошибок**](./07-cheatsheet-and-contracts.md)
+8. 🧮 [**Математические модели и игровая логика (`docs/math`)**](../math/README.md)
+

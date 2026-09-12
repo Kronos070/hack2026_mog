@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import type { HistoryEntry, RoundStart, Theme, User } from '@/shared/api/contract';
+import { achievementSchema, rewardSchema } from '@/shared/api/contract';
 
 export const backendUserSchema = z.object({
   id: z.number(),
@@ -45,6 +46,15 @@ export const cashoutResponseSchema = z.object({
   winAmount: z.number(),
   newBalance: z.number(),
   pointsEarned: z.number().nullable().optional(),
+  levelsPassed: z.number().nullable().optional(),
+  boosterActivated: z.boolean().nullable().optional(),
+  boosterMultiplier: z.number().nullable().optional(),
+  nextHouseEdge: z.number().nullable().optional(),
+  serverSeed: z.string().nullable().optional(),
+  clientSeed: z.string().nullable().optional(),
+  nonce: z.number().nullable().optional(),
+  reward: rewardSchema.nullable().optional(),
+  unlockedAchievements: z.array(achievementSchema).optional(),
 });
 
 export const historyItemSchema = z.object({
@@ -57,6 +67,7 @@ export const historyItemSchema = z.object({
   cashoutMultiplier: z.number().nullable().optional(),
   winAmount: z.number().nullable().optional(),
   isWin: z.boolean().nullable().optional(),
+  status: z.string().nullable().optional(),
   createdAt: z.string().nullable().optional(),
 });
 

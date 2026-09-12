@@ -166,6 +166,85 @@ export const gameConfigSchema = z.object({
   popupTimeout: z.number().positive(),
 });
 
+export const statRadarSchema = z.object({
+  patience: z.number(),
+  boosters: z.number(),
+  collector: z.number(),
+  generosity: z.number(),
+  winRate: z.number(),
+  risk: z.number(),
+  gamesAnalyzed: z.number().int().nonnegative(),
+  totalGames: z.number().int().nonnegative(),
+  nextRecalcIn: z.number().int().nonnegative(),
+});
+
+export const playerHouseEdgeSchema = z.object({
+  userId: z.number(),
+  currentHouseEdge: z.number(),
+  rtp: z.number(),
+  expectedValue: z.number(),
+  lastBetAmount: z.number().nullable().optional(),
+});
+
+export const topUpResponseSchema = z.object({
+  userId: z.number(),
+  username: z.string(),
+  addedAmount: z.number(),
+  newBalance: z.number(),
+});
+
+export const tournamentHistoryItemSchema = z.object({
+  place: z.number().int(),
+  playerId: z.string(),
+  playerName: z.string(),
+  score: z.number().nonnegative(),
+  prizeAwarded: z.number().nonnegative(),
+  awardedAt: z.string(),
+});
+
+export const tournamentSettlementResultSchema = z.object({
+  status: z.enum(['SUCCESS', 'SKIPPED', 'ALREADY_SETTLED']),
+  tournamentTitle: z.string(),
+  settledAt: z.number(),
+  rewardedPlayersCount: z.number().int().nonnegative(),
+  totalPrizesAwarded: z.number().nonnegative(),
+  winners: z.array(tournamentHistoryItemSchema),
+  message: z.string(),
+});
+
+export const gameRoundStateSchema = z.object({
+  roundId: z.string().nullable().optional(),
+  status: z.enum(['IN_PROGRESS', 'FINISHED', 'CRASHED', 'NO_ACTIVE_ROUND']),
+  isCrashed: z.boolean(),
+  currentMultiplier: z.number(),
+  crashMultiplier: z.number().nullable().optional(),
+  elapsedMs: z.number(),
+  potentialWin: z.number(),
+  startTime: z.string().nullable().optional(),
+  levelsPassed: z.number(),
+  pointsEarned: z.number(),
+  boosterActivated: z.boolean(),
+});
+
+export const pingSchema = z.object({
+  status: z.string(),
+  timestamp: z.string(),
+  message: z.string(),
+});
+
+export const updateProfileRequestSchema = z.object({
+  username: z.string().min(3).max(64).optional(),
+  email: z.string().email().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
+
+export const changePasswordRequestSchema = z.object({
+  oldPassword: z.string().min(1),
+  newPassword: z.string().min(6).max(100),
+});
+
 export type Theme = z.infer<typeof themeSchema>;
 export type Role = z.infer<typeof roleSchema>;
 export type User = z.infer<typeof userSchema>;
@@ -184,3 +263,12 @@ export type Achievement = z.infer<typeof achievementSchema>;
 export type Rank = z.infer<typeof rankSchema>;
 export type TournamentEntry = z.infer<typeof tournamentEntrySchema>;
 export type Tournament = z.infer<typeof tournamentSchema>;
+export type StatRadar = z.infer<typeof statRadarSchema>;
+export type PlayerHouseEdge = z.infer<typeof playerHouseEdgeSchema>;
+export type TopUpResponse = z.infer<typeof topUpResponseSchema>;
+export type TournamentHistoryItem = z.infer<typeof tournamentHistoryItemSchema>;
+export type TournamentSettlementResult = z.infer<typeof tournamentSettlementResultSchema>;
+export type GameRoundState = z.infer<typeof gameRoundStateSchema>;
+export type PingResponse = z.infer<typeof pingSchema>;
+export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

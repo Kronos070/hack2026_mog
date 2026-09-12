@@ -2,6 +2,7 @@
 
 import { readToken } from '@/shared/api/auth-token';
 import { API_URL } from '@/shared/api/http';
+import type { Achievement, Reward } from '@/shared/api/contract';
 
 export interface SocketMessage {
   type: string;
@@ -19,11 +20,13 @@ export interface SocketMessage {
   levelsPassed?: number;
   boosterActivated?: boolean;
   message?: string;
+  reward?: Reward | null;
+  unlockedAchievements?: Achievement[];
 }
 
 function socketUrl(): string {
   const base = API_URL.replace(/\/api\/?$/, '');
-  const wsBase = base.replace(/^http/, 'ws');
+  const wsBase = base.replace(/^http(s?):\/\//, 'ws$1://');
   return `${wsBase}/ws/game?token=${encodeURIComponent(readToken() ?? '')}`;
 }
 

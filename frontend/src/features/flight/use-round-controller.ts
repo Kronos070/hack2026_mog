@@ -64,11 +64,19 @@ export function useRoundController() {
     (message: SocketMessage) => {
       const active = useRoundStore.getState().round;
       if (!active) return;
-      finishRound(buildRoundResult(active, message, cashoutRef.current));
+      const roundResult = buildRoundResult(active, message, cashoutRef.current);
+      finishRound(roundResult);
+      if (roundResult.unlockedAchievements.length > 0) {
+        pushAchievements(roundResult.unlockedAchievements);
+      }
       void refreshUser();
       void queryClient.invalidateQueries({ queryKey: ['history'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['tournament'] });
+      void queryClient.invalidateQueries({ queryKey: ['radar-stats'] });
     },
-    [finishRound, refreshUser, queryClient],
+    [finishRound, refreshUser, queryClient, pushAchievements],
   );
 
   const handleSocketCashout = useCallback((message: SocketMessage) => {
@@ -121,12 +129,19 @@ export function useRoundController() {
     try {
       const payout = await api.cashout(multiplier, boosterRef.current, round?.roundId);
       cashoutRef.current = payout.multiplier;
+      if (payout.unlockedAchievements && payout.unlockedAchievements.length > 0) {
+        pushAchievements(payout.unlockedAchievements);
+      }
       soundManager.play('cashout', 0.8);
       toast.success(`Забрано ${payout.payout} бонусов · могли бы забрать больше`);
-    } catch {
-      toast.error('Не удалось зафиксировать выигрыш');
+      await refreshUser();
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+      void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['tournament'] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Не удалось зафиксировать выигрыш');
     }
-  }, [cashedOut, canCashout, getSnapshot, markCashout, round]);
+  }, [cashedOut, canCashout, getSnapshot, markCashout, round, refreshUser, queryClient, pushAchievements]);
 
   return {
     phase,

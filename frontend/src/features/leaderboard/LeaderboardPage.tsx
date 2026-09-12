@@ -4,15 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { useSessionStore } from '@/entities/game/session-store';
+import { useTournamentStreams } from '@/features/tournament/use-tournament-streams';
 import { Button } from '@/shared/ui/Button';
 import { AppHeader } from '@/shared/ui/AppHeader';
 import { Avatar } from '@/shared/ui/Avatar';
 import { cn } from '@/shared/lib/cn';
 
-const POLL_INTERVAL_MS = 1000;
+const POLL_INTERVAL_MS = 2000;
 
 export function LeaderboardPage() {
-  // Показывает участников турнира, опрашивая сервер раз в секунду
+  // Показывает участников турнира в реальном времени по SSE-стриму
+  useTournamentStreams();
   const navigate = useNavigate();
   const user = useSessionStore((state) => state.user);
 

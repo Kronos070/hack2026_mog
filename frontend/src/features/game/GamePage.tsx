@@ -24,13 +24,15 @@ export function GamePage() {
   // Управляет всеми фазами раунда в пределах одного экрана
   const { user, theme, betCost, boosterTier, lastBet, setBet, rememberBet } = useSessionStore();
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [historyScope, setHistoryScope] = useState<'all' | 'my'>('all');
 
   const controller = useRoundController();
   const { phase, round, result, config, getSnapshot } = controller;
 
   const { data: history = [] } = useQuery({
-    queryKey: ['history'],
-    queryFn: () => api.getHistory(),
+    queryKey: ['history', historyScope],
+    queryFn: () => api.getHistory({ my: historyScope === 'my', limit: 20 }),
+    refetchInterval: 5000,
   });
 
   const balance = user?.balance ?? 0;
@@ -72,7 +74,11 @@ export function GamePage() {
             className="flex min-h-0 flex-1 flex-col"
             bodyClassName="no-scrollbar min-h-0 flex-1 overflow-y-auto"
           >
-            <HistoryList entries={history} />
+            <HistoryList
+              entries={history}
+              scope={historyScope}
+              onScopeChange={setHistoryScope}
+            />
           </GlassPanel>
 
           <GlassPanel

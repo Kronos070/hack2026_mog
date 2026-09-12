@@ -9,8 +9,22 @@ export function buildRoundResult(
   cashoutMultiplier: number | null,
 ): RoundResult {
   // Переводит событие CRASHED в модель результата раунда
-  const payout = cashoutMultiplier !== null ? Math.round(round.betCost * cashoutMultiplier) : 0;
-  const collected = Math.min((message.levelsPassed ?? 0) % PUZZLE_TOTAL, PUZZLE_TOTAL - 1);
+  const payout =
+    message.winAmount !== undefined && message.winAmount !== null
+      ? message.winAmount
+      : cashoutMultiplier !== null
+        ? Math.round(round.betCost * cashoutMultiplier)
+        : 0;
+
+  const collectedFallback = Math.min((message.levelsPassed ?? 0) % PUZZLE_TOTAL, PUZZLE_TOTAL - 1);
+
+  const reward = message.reward ?? {
+    kind: 'puzzle-piece' as const,
+    pieceId: `piece-${collectedFallback}`,
+    label: PUZZLE_PIECES[collectedFallback] ?? 'Фрагмент',
+    collected: collectedFallback + 1,
+    total: PUZZLE_TOTAL,
+  };
 
   return {
     roundId: round.roundId,
@@ -22,15 +36,9 @@ export function buildRoundResult(
     pointsEarned: message.pointsEarned ?? 0,
     levelsPassed: message.levelsPassed ?? 0,
     boosterActivated: message.boosterActivated ?? false,
-    reward: {
-      kind: 'puzzle-piece',
-      pieceId: `piece-${collected}`,
-      label: PUZZLE_PIECES[collected] ?? 'Фрагмент',
-      collected: collected + 1,
-      total: PUZZLE_TOTAL,
-    },
+    reward,
     balance: message.newBalance ?? 0,
     finishedAt: Date.now(),
-    unlockedAchievements: [],
+    unlockedAchievements: message.unlockedAchievements ?? [],
   };
 }

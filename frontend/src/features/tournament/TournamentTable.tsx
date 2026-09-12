@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '@/shared/api/client';
 import { useCountdown } from '@/features/tournament/use-countdown';
+import { useTournamentStreams } from '@/features/tournament/use-tournament-streams';
 import { Avatar } from '@/shared/ui/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -16,7 +17,9 @@ const PLACE_COLORS: Readonly<Record<number, string>> = {
 };
 
 export function TournamentTable() {
-  // Показывает текущий рейтинг турнира и время до его окончания
+  // Показывает текущий рейтинг турнира и время до его окончания (обновление по SSE)
+  useTournamentStreams();
+
   const { data, isLoading } = useQuery({
     queryKey: ['tournament'],
     queryFn: () => api.getTournament(),

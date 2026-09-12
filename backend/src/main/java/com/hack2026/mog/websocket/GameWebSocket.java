@@ -160,8 +160,8 @@ public class GameWebSocket {
                     break;
                 }
 
-                // Текущий базовый множитель по экспоненциальной формуле
-                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, GameService.DEFAULT_GROWTH_RATE);
+                // Текущий базовый множитель по экспоненциальной формуле с динамическим growthRate
+                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, activeRound.growthRate());
                 double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
 
                 // Проверка достижения уровня бустера
@@ -172,7 +172,7 @@ public class GameWebSocket {
                             boosterActivated = true;
                             double previousMultiplier = baseMultiplier;
                             double currentMultiplier = CrashGenerator.floorTo2Decimals(previousMultiplier * boosterMultiplier);
-                            int bonusPoints = boosterMultiplier * 10;
+                            int bonusPoints = activeRound.pointsBoosterBonus();
 
                             LOG.infof("Booster activated for user %d: level=%d, mult=x%d, prev=%.2f, curr=%.2f, points=%d",
                                     userId, boosterLevel, boosterMultiplier, previousMultiplier, currentMultiplier, bonusPoints);

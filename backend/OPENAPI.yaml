@@ -215,7 +215,91 @@ components:
           $ref: "#/components/schemas/Instant"
         updatedAt:
           $ref: "#/components/schemas/Instant"
+    LootProbabilitiesDto:
+      type: object
+      required:
+      - green
+      - red
+      properties:
+        green:
+          type: array
+          items:
+            type: number
+            format: double
+        red:
+          type: array
+          items:
+            type: number
+            format: double
+    GameConfigDto:
+      type: object
+      required:
+      - gameId
+      - gameName
+      - isActive
+      - alpha
+      - maxMultiplier
+      - minCrashMultiplier
+      - multiplierGrowthRate
+      - growthAcceleration
+      - pointsPerLine
+      - pointsCashoutBonus
+      - pointsBoosterBonus
+      - boosterTierValues
+      - lootProbabilities
+      - minWinAmount
+      - popupTimeout
+      properties:
+        gameId:
+          type: string
+        gameName:
+          type: string
+        isActive:
+          type: boolean
+        alpha:
+          type: number
+          format: double
+        maxMultiplier:
+          type: number
+          format: double
+        minCrashMultiplier:
+          type: number
+          format: double
+          minimum: 1.0
+        multiplierGrowthRate:
+          type: number
+          format: double
+        growthAcceleration:
+          type: number
+          format: double
+          minimum: 1.0
+          maximum: 3.0
+        pointsPerLine:
+          type: integer
+          minimum: 0
+        pointsCashoutBonus:
+          type: integer
+          minimum: 0
+        pointsBoosterBonus:
+          type: integer
+          minimum: 0
+        boosterTierValues:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+            format: double
+        lootProbabilities:
+          $ref: "#/components/schemas/LootProbabilitiesDto"
+        minWinAmount:
+          type: integer
+          minimum: 0
+        popupTimeout:
+          type: integer
 tags:
+- name: Admin Config
+  description: Управление конфигурацией игры и hot-reload параметров
 - name: Authentication
   description: Авторизация и регистрация пользователей через JWT Bearer токен
 - name: Game
@@ -555,3 +639,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TopUpBalanceResponse"
+  /api/admin/config:
+    get:
+      summary: Получить текущую конфигурацию игры
+      description: Возвращает актуальные параметры игры из in-memory кэша без задержек обращения к БД
+      tags:
+      - Admin Config
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []
+    put:
+      summary: Обновить конфигурацию игры (Hot-Reload)
+      description: Сохраняет параметры в БД и обновляет in-memory ссылку. Доступно только пользователям с ролью ADMIN
+      tags:
+      - Admin Config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameConfigDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []
+  /api/admin/config/reset:
+    post:
+      summary: Сбросить конфигурацию к дефолтной
+      description: Сбрасывает конфигурацию игры к эталонным настройкам по умолчанию. Доступно только пользователям с ролью ADMIN
+      tags:
+      - Admin Config
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []

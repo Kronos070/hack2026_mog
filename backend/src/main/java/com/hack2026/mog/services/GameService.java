@@ -1,5 +1,6 @@
 package com.hack2026.mog.services;
 
+import com.hack2026.mog.dto.config.GameConfigDto;
 import com.hack2026.mog.dto.game.ActiveGameRound;
 import com.hack2026.mog.dto.game.GameRoundCashoutResult;
 import com.hack2026.mog.dto.game.GameRoundStartResult;
@@ -43,15 +44,15 @@ public class GameService {
     private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(GameService.class);
 
     /**
-     * Константа экспоненциального роста множителя в секунду: M(t) = 1.00 * e^(GROWTH_RATE * t).
-     * При k = 0.06 множитель 2.0x достигается за ~11.55 сек.
+     * Константа экспоненциального роста множителя в секунду (fallback): M(t) = 1.00 * e^(GROWTH_RATE * t).
      */
-    public static final double DEFAULT_GROWTH_RATE = 0.06;
+    public static final double DEFAULT_GROWTH_RATE = 0.22;
 
     private final UserRepository userRepository;
     private final GameRoundRepository gameRoundRepository;
     private final CrashGenerator crashGenerator;
     private final HouseEdgeCalculator houseEdgeCalculator;
+    private final GameConfigService gameConfigService;
 
     /**
      * In-memory кэш активных раундов: userId -> ActiveGameRound
@@ -59,9 +60,12 @@ public class GameService {
     private final Map<Long, ActiveGameRound> activeRounds = new ConcurrentHashMap<>();
 
     @Inject
-    public GameService(UserRepository userRepository, GameRoundRepository gameRoundRepository) {
+    public GameService(UserRepository userRepository,
+                       GameRoundRepository gameRoundRepository,
+                       GameConfigService gameConfigService) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
+        this.gameConfigService = gameConfigService;
         this.crashGenerator = new CrashGenerator();
         this.houseEdgeCalculator = new HouseEdgeCalculator();
     }
@@ -71,12 +75,29 @@ public class GameService {
      */
     public GameService(UserRepository userRepository,
                        GameRoundRepository gameRoundRepository,
+                       GameConfigService gameConfigService,
                        CrashGenerator crashGenerator,
                        HouseEdgeCalculator houseEdgeCalculator) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
+        this.gameConfigService = gameConfigService;
         this.crashGenerator = crashGenerator;
         this.houseEdgeCalculator = houseEdgeCalculator;
+    }
+
+    public GameService(UserRepository userRepository,
+                       GameRoundRepository gameRoundRepository,
+                       CrashGenerator crashGenerator,
+                       HouseEdgeCalculator houseEdgeCalculator) {
+        this(userRepository, gameRoundRepository, null, crashGenerator, houseEdgeCalculator);
+    }
+
+    public GameService(UserRepository userRepository, GameRoundRepository gameRoundRepository) {
+        this(userRepository, gameRoundRepository, null);
+    }
+
+    private GameConfigDto getCurrentConfigOrDefault() {
+        return gameConfigService != null ? gameConfigService.getCurrentConfig() : GameConfigDto.defaultConfig();
     }
 
     /**
@@ -106,11 +127,17 @@ public class GameService {
             }
         }
 
+        GameConfigDto currentConfig = getCurrentConfigOrDefault();
+        double growthRate = currentConfig.multiplierGrowthRate();
+        int pointsPerLine = currentConfig.pointsPerLine();
+        int pointsCashoutBonus = currentConfig.pointsCashoutBonus();
+        int pointsBoosterBonus = currentConfig.pointsBoosterBonus();
+
         // Дополнительная проверка в БД
         Optional<GameRound> dbActive = gameRoundRepository.findActiveByUserId(userId);
         if (dbActive.isPresent()) {
             GameRound round = dbActive.get();
-            Instant roundCrashTime = calculateCrashTime(round.getStartTime(), round.getCrashMultiplier(), DEFAULT_GROWTH_RATE);
+            Instant roundCrashTime = calculateCrashTime(round.getStartTime(), round.getCrashMultiplier(), growthRate);
             if (now.isAfter(roundCrashTime)) {
                 resolveDbCrash(round, user, roundCrashTime);
             } else {
@@ -141,7 +168,7 @@ public class GameService {
 
         // Расчет времени краха по экспоненциальной формуле
         Instant startTime = now;
-        Instant crashTime = calculateCrashTime(startTime, crashMultiplier, DEFAULT_GROWTH_RATE);
+        Instant crashTime = calculateCrashTime(startTime, crashMultiplier, growthRate);
         UUID roundId = UUID.randomUUID();
 
         // Конфигурация уровней и бустера для выбранной темы
@@ -176,7 +203,7 @@ public class GameService {
         gameRound.setBoosterLevel(boosterLevel);
         gameRoundRepository.persist(gameRound);
 
-        // Помещаем в in-memory кэш для мгновенной валидации cashout
+        // Помещаем в in-memory кэш со снапшотом параметров для мгновенной валидации cashout
         ActiveGameRound activeRound = new ActiveGameRound(
                 roundId,
                 userId,
@@ -195,16 +222,21 @@ public class GameService {
                 crashResult.hashHex(),
                 nonce,
                 totalLevels,
-                unlockMultiplier
+                unlockMultiplier,
+                growthRate,
+                pointsPerLine,
+                pointsCashoutBonus,
+                pointsBoosterBonus
         );
         activeRounds.put(userId, activeRound);
-        LOG.infof("Round started: roundId=%s, userId=%d, bet=%d, theme=%s, booster=x%d", roundId, userId, betAmount, theme, boosterMult);
+        LOG.infof("Round started: roundId=%s, userId=%d, bet=%d, theme=%s, booster=x%d, growthRate=%.2f",
+                roundId, userId, betAmount, theme, boosterMult, growthRate);
 
         return new GameRoundStartResult(
                 roundId,
                 startTime,
                 CrashGenerator.MIN_CRASH,
-                DEFAULT_GROWTH_RATE,
+                growthRate,
                 crashResult.hashHex(),
                 betAmount,
                 boosterMult,
@@ -245,8 +277,9 @@ public class GameService {
                 throw new BadRequestException("Game round is already finished with status: " + dbRound.getStatus());
             }
 
-            // Восстанавливаем ActiveGameRound из БД
-            Instant crashTime = calculateCrashTime(dbRound.getStartTime(), dbRound.getCrashMultiplier(), DEFAULT_GROWTH_RATE);
+            // Восстанавливаем ActiveGameRound из БД с актуальным конфигом
+            GameConfigDto cfg = getCurrentConfigOrDefault();
+            Instant crashTime = calculateCrashTime(dbRound.getStartTime(), dbRound.getCrashMultiplier(), cfg.multiplierGrowthRate());
             String theme = dbRound.getTheme();
             int totalLevels = GameLevelConfig.getTotalLevels(theme);
             double unlockMultiplier = GameLevelConfig.getUnlockMultiplier(theme);
@@ -274,7 +307,11 @@ public class GameService {
                     dbRound.getCombinedHash(),
                     dbRound.getNonce(),
                     totalLevels,
-                    unlockMultiplier
+                    unlockMultiplier,
+                    cfg.multiplierGrowthRate(),
+                    cfg.pointsPerLine(),
+                    cfg.pointsCashoutBonus(),
+                    cfg.pointsBoosterBonus()
             );
         }
 
@@ -288,7 +325,7 @@ public class GameService {
         }
 
         // Базовый множитель полета на текущий момент
-        double rawBaseMultiplier = calculateMultiplierAt(activeRound.startTime(), now, DEFAULT_GROWTH_RATE);
+        double rawBaseMultiplier = calculateMultiplierAt(activeRound.startTime(), now, activeRound.growthRate());
         double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
 
         // Проверка прохождения 1-го уровня для разблокировки кнопки «Забрать» (по CASE.md)
@@ -324,7 +361,10 @@ public class GameService {
 
         // Расчет заработанных игровых очков
         int passedLevels = GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseMultiplier);
-        int pointsEarned = GameLevelConfig.calculatePoints(passedLevels, true, boosterActivated, activeRound.boosterMultiplier());
+        int pointsEarned = GameLevelConfig.calculatePoints(
+                passedLevels, true, boosterActivated,
+                activeRound.pointsPerLine(), activeRound.pointsCashoutBonus(), activeRound.pointsBoosterBonus()
+        );
 
         // Начисление выигрыша и очков на баланс
         user.setBonusBalance(user.getBonusBalance() + winAmount);
@@ -407,12 +447,15 @@ public class GameService {
             }
 
             double currentMultiplier = CrashGenerator.floorTo2Decimals(
-                    calculateMultiplierAt(activeRound.startTime(), now, DEFAULT_GROWTH_RATE)
+                    calculateMultiplierAt(activeRound.startTime(), now, activeRound.growthRate())
             );
             long elapsedMs = Math.max(0, Duration.between(activeRound.startTime(), now).toMillis());
             long potentialWin = Math.round(activeRound.betAmount() * currentMultiplier);
             int passedLevels = GameLevelConfig.calculatePassedLevels(activeRound.theme(), currentMultiplier);
-            int currentPoints = GameLevelConfig.calculatePoints(passedLevels, false, activeRound.isBoosterActivated(), activeRound.boosterMultiplier());
+            int currentPoints = GameLevelConfig.calculatePoints(
+                    passedLevels, false, activeRound.isBoosterActivated(),
+                    activeRound.pointsPerLine(), activeRound.pointsCashoutBonus(), activeRound.pointsBoosterBonus()
+            );
 
             return new GameRoundStateResult(
                     roundId,
@@ -478,7 +521,10 @@ public class GameService {
                 : activeRound.crashMultiplier();
 
         int passedLevels = GameLevelConfig.calculatePassedLevels(activeRound.theme(), activeRound.crashMultiplier());
-        int pointsEarned = GameLevelConfig.calculatePoints(passedLevels, false, boosterActivated, activeRound.boosterMultiplier());
+        int pointsEarned = GameLevelConfig.calculatePoints(
+                passedLevels, false, boosterActivated,
+                activeRound.pointsPerLine(), activeRound.pointsCashoutBonus(), activeRound.pointsBoosterBonus()
+        );
 
         // Обновление персонального House Edge игрока (проигрыш)
         RoundOutcome lossOutcome = RoundOutcome.loss(
@@ -539,9 +585,13 @@ public class GameService {
         user.setCurrentHouseEdge(nextHe);
         user.setLastBetAmount(round.getBetAmount());
 
+        GameConfigDto cfg = getCurrentConfigOrDefault();
         int passedLevels = GameLevelConfig.calculatePassedLevels(round.getTheme(), round.getCrashMultiplier());
         boolean wasBooster = round.getBoosterMultiplier() != null && round.getBoosterMultiplier() > 1;
-        int pointsEarned = GameLevelConfig.calculatePoints(passedLevels, false, wasBooster, round.getBoosterMultiplier() != null ? round.getBoosterMultiplier() : 1);
+        int pointsEarned = GameLevelConfig.calculatePoints(
+                passedLevels, false, wasBooster,
+                cfg.pointsPerLine(), cfg.pointsCashoutBonus(), cfg.pointsBoosterBonus()
+        );
         user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
         round.setPointsEarned(pointsEarned);
 
@@ -613,5 +663,9 @@ public class GameService {
 
     public Map<Long, ActiveGameRound> getActiveRounds() {
         return activeRounds;
+    }
+
+    public ActiveGameRound getActiveRound(Long userId) {
+        return activeRounds.get(userId);
     }
 }

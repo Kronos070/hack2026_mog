@@ -47,4 +47,8 @@ public record StartRoundRequest(
             boosterTier = boosterMultiplier;
         }
     }
+
+    public StartRoundRequest(Long betAmount, String theme, Integer boosterMultiplier) {
+        this(betAmount, betAmount, theme, boosterMultiplier, boosterMultiplier);
+    }
 }

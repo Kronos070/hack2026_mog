@@ -1,6 +1,6 @@
 # Решенные задачи хакатона (Resolved Backlog)
 
-Статус: reference / current · сверено: 2026-09-11
+Статус: reference / current · сверено: 2026-09-12
 
 База прецедентов: закрытые задачи с описанием решения. Перед исправлением бага или написанием похожего кода сверяйтесь с этим списком, чтобы не изобретать велосипед и не вносить регрессии.
 
@@ -14,3 +14,4 @@
 - [x] **DOC-1: OpenAPI 3.1 спецификация** — Сгенерирован файл [OPENAPI.yaml](../OPENAPI.yaml) с описанием схемы и интерактивный Swagger UI на `/q/swagger-ui`.
 - [x] **GAME-1 & GAME-2: Внутренний GameService и транзакционный баланс** — Реализован `GameService` с атомарным списанием ставки при старте (`POST /api/game/start`), серверным Provably Fair расчетом точки краха (`CrashGenerator`), валидацией времени и фиксацией выигрыша (`POST /api/game/cashout`). Персональный House Edge хранится в `users` и пересчитывается после каждого исхода.
 - [x] **WS-1, WS-2, WS-3: Representation Layer (REST & WebSocket 60 FPS)** — Реализован `GameResource` (`/api/game/*`) и полнодуплексный WebSocket `GameWebSocket` (`/ws/game`) на Quarkus WebSockets Next со стримингом тиков на виртуальных потоках со скоростью 60 FPS (~16 мс) до момента краха. DTO records в пакете `com.hack2026.mog.dto.game`.
+- [x] **GAME-3: Синхронизация с контрактами фронтенда (Feedback 1)** — Добавлена колонка `points` в `users` (миграция `V1.0.5`), создан seed-администратор `admin`/`admin123` (роль `ADMIN`, 50k бонусов), обеспечена толерантность формата `POST /api/game/start` (алиасы `cost`/`betAmount`, `boosterTier`/`boosterMultiplier`), расширены WebSocket-события `CRASHED` (`pointsEarned`, `levelsPassed`, `boosterActivated`, `newBalance`) и `CASHOUT`, добавлен тестовый эндпоинт `POST /api/game/top-up`, HTTP-логирование `LoggingFilter`, и переключен фронтенд на реальный бэкенд через `frontend/.env`.

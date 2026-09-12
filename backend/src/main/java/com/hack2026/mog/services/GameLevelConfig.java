@@ -102,7 +102,22 @@ public final class GameLevelConfig {
     }
 
     /**
-     * Расчет очков за раунд.
+     * Расчет очков за раунд по настраиваемым параметрам конфигурации.
+     */
+    public static int calculatePoints(int passedLevels, boolean isWin, boolean boosterActivated,
+                                      int pointsPerLine, int pointsCashoutBonus, int pointsBoosterBonus) {
+        int points = passedLevels * pointsPerLine;
+        if (isWin) {
+            points += pointsCashoutBonus;
+        }
+        if (boosterActivated) {
+            points += pointsBoosterBonus;
+        }
+        return points;
+    }
+
+    /**
+     * Расчет очков за раунд (legacy fallback).
      */
     public static int calculatePoints(int passedLevels, boolean isWin, boolean boosterActivated, int boosterMultiplier) {
         int points = passedLevels * POINTS_PER_LEVEL;

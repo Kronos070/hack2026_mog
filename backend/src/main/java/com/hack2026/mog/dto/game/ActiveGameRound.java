@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Внутреннее in-memory представление активного раунда игрока.
+ * Хранит снапшот параметров игры (growthRate, points) на момент старта раунда.
  */
 public record ActiveGameRound(
         UUID roundId,
@@ -26,9 +27,65 @@ public record ActiveGameRound(
         long nonce,
         int totalLevels,
         double unlockMultiplier,
+        double growthRate,
+        int pointsPerLine,
+        int pointsCashoutBonus,
+        int pointsBoosterBonus,
         AtomicBoolean boosterActivated,
         AtomicBoolean cashedOut
 ) {
+    public ActiveGameRound(
+            UUID roundId,
+            Long userId,
+            Long betAmount,
+            Integer boosterMultiplier,
+            Integer boosterLevel,
+            Double boosterThreshold,
+            String theme,
+            double crashMultiplier,
+            double houseEdge,
+            Long previousBetAmount,
+            Instant startTime,
+            Instant crashTime,
+            String serverSeed,
+            String clientSeed,
+            String hashHex,
+            long nonce,
+            int totalLevels,
+            double unlockMultiplier,
+            double growthRate,
+            int pointsPerLine,
+            int pointsCashoutBonus,
+            int pointsBoosterBonus
+    ) {
+        this(
+                roundId,
+                userId,
+                betAmount,
+                boosterMultiplier != null ? boosterMultiplier : 1,
+                boosterLevel,
+                boosterThreshold,
+                theme,
+                crashMultiplier,
+                houseEdge,
+                previousBetAmount,
+                startTime,
+                crashTime,
+                serverSeed,
+                clientSeed,
+                hashHex,
+                nonce,
+                totalLevels,
+                unlockMultiplier,
+                growthRate > 0 ? growthRate : 0.22,
+                pointsPerLine >= 0 ? pointsPerLine : 10,
+                pointsCashoutBonus >= 0 ? pointsCashoutBonus : 25,
+                pointsBoosterBonus >= 0 ? pointsBoosterBonus : 50,
+                new AtomicBoolean(false),
+                new AtomicBoolean(false)
+        );
+    }
+
     public ActiveGameRound(
             UUID roundId,
             Long userId,
@@ -53,7 +110,7 @@ public record ActiveGameRound(
                 roundId,
                 userId,
                 betAmount,
-                boosterMultiplier != null ? boosterMultiplier : 1,
+                boosterMultiplier,
                 boosterLevel,
                 boosterThreshold,
                 theme,
@@ -68,8 +125,10 @@ public record ActiveGameRound(
                 nonce,
                 totalLevels,
                 unlockMultiplier,
-                new AtomicBoolean(false),
-                new AtomicBoolean(false)
+                0.22,
+                10,
+                25,
+                50
         );
     }
 

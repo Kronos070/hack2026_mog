@@ -45,6 +45,9 @@
 | `GET` | `/api/game/house-edge` | JWT | Текущий House Edge, RTP и EV игрока |
 | `POST` | `/api/game/house-edge/reset` | JWT | Сброс House Edge игрока к базовому значению `0.04` |
 | `POST` | `/api/game/top-up` | JWT | Быстрое пополнение баланса бонусов (алиас для игр) |
+| `GET` | `/api/admin/config` | JWT | Чтение текущей конфигурации игры (кэш в RAM, O(1)) |
+| `PUT` | `/api/admin/config` | ADMIN | Горячее сохранение конфигурации игры (Hot-Reload) |
+| `POST` | `/api/admin/config/reset` | ADMIN | Сброс конфигурации к эталонным дефолтным значениям |
 
 ### 2.2. WebSocket
 
@@ -441,6 +444,54 @@
 Сброс House Edge игрока к базовому значению `0.04` (4%) и очистка истории ставок (для тестирования).
 - **Headers:** `Authorization: Bearer <jwt_token>`
 - **Ответ `200 OK`:** Объект `PlayerHouseEdgeResponse`.
+
+---
+
+### 3.5. Управление конфигурацией игры (Admin Config & Hot-Reload)
+
+Модуль управления динамическими параметрами игры согласно ТЗ §1.9. Обеспечивает чтение параметров за $O(1)$ без нагрузки на базу данных на тиках WebSocket и горячее обновление без рестарта сервера.
+
+#### `GET /api/admin/config`
+Получить актуальную конфигурацию игры из in-memory кэша.
+- **Headers:** `Authorization: Bearer <jwt_token>` (доступно всем авторизованным пользователям)
+- **Ответ `200 OK`:**
+```json
+{
+  "gameId": "air-balloon",
+  "gameName": "Воздушный Шар",
+  "isActive": true,
+  "alpha": 1.30,
+  "maxMultiplier": 100.0,
+  "minCrashMultiplier": 1.01,
+  "multiplierGrowthRate": 0.22,
+  "growthAcceleration": 1.5,
+  "pointsPerLine": 10,
+  "pointsCashoutBonus": 25,
+  "pointsBoosterBonus": 50,
+  "boosterTierValues": [1.0, 2.0, 3.0, 4.0],
+  "lootProbabilities": {
+    "green": [0.0, 0.25, 0.20, 0.18, 0.15, 0.10, 0.07, 0.04, 0.01],
+    "red": [0.0, 0.20, 0.18, 0.15, 0.13, 0.10, 0.08, 0.06, 0.04, 0.03, 0.02, 0.01]
+  },
+  "minWinAmount": 50,
+  "popupTimeout": 10
+}
+```
+
+#### `PUT /api/admin/config`
+Горячее обновление параметров игры (Hot-Reload). Сохраняет обновленный JSONB в таблице `game_configs` и атомарно заменяет ссылку в памяти `AtomicReference`.
+- **Headers:** `Authorization: Bearer <jwt_token>` (роль `ADMIN`, иначе `403 Forbidden`)
+- **Body:** JSON объект `GameConfigDto` (валидируется через Jakarta Validation: `@Positive`, `@DecimalMin`, `@Size(min=4, max=4)` и т.д.).
+- **Ответ `200 OK`:** Обновленный объект `GameConfigDto`.
+- **Ошибки:**
+  - `400 Bad Request` — нарушение ограничений валидации параметров.
+  - `401 Unauthorized` — отсутствует Bearer токен.
+  - `403 Forbidden` — у пользователя нет роли `ADMIN`.
+
+#### `POST /api/admin/config/reset`
+Сброс параметров игры к эталонным заводским настройкам (ТЗ §1.9).
+- **Headers:** `Authorization: Bearer <jwt_token>` (роль `ADMIN`)
+- **Ответ `200 OK`:** Сброшенный объект `GameConfigDto` с дефолтными значениями.
 
 ---
 

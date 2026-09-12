@@ -6,4 +6,4 @@
 
 - **Конфигурация игры и админка (CFG-1 / Game Config)** — [handoff](handoff-game-config.md) — completed, 2026-09-12, next: Переход к треку TOUR-1 (Турнирная таблица)
 - **Турнирная таблица и лидерборд (TOUR-1 / Tournament)** — [handoff](handoff-tournament.md) — completed, 2026-09-12, next: Переход к треку META / Rewards (Мета-игра)
-- **Мета-игра: Коллекция пазлов, ранги и достижения (META / Rewards)** — [handoff](handoff-meta-game.md) — pending, 2026-09-12, next: Миграция БД V1.0.8 для пазлов и ачивок, выдача фрагментов и расчет рангов
+- **Мета-игра: Коллекция пазлов, ранги и достижения (META / Rewards)** — [handoff](handoff-meta-game.md) — completed, 2026-09-12, next: Все запланированные треки хакатона завершены

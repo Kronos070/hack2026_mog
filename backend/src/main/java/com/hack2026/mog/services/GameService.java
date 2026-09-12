@@ -6,6 +6,8 @@ import com.hack2026.mog.dto.game.GameRoundCashoutResult;
 import com.hack2026.mog.dto.game.GameRoundStartResult;
 import com.hack2026.mog.dto.game.GameRoundStateResult;
 import com.hack2026.mog.dto.game.StartRoundRequest;
+import com.hack2026.mog.dto.meta.AchievementDto;
+import com.hack2026.mog.dto.meta.RewardDto;
 import com.hack2026.mog.entities.GameRound;
 import com.hack2026.mog.entities.User;
 import com.hack2026.mog.exceptions.BadRequestException;
@@ -21,6 +23,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,6 +57,7 @@ public class GameService {
     private final HouseEdgeCalculator houseEdgeCalculator;
     private final GameConfigService gameConfigService;
     private final TournamentService tournamentService;
+    private final MetaGameService metaGameService;
 
     /**
      * In-memory кэш активных раундов: userId -> ActiveGameRound
@@ -64,11 +68,13 @@ public class GameService {
     public GameService(UserRepository userRepository,
                        GameRoundRepository gameRoundRepository,
                        GameConfigService gameConfigService,
-                       TournamentService tournamentService) {
+                       TournamentService tournamentService,
+                       MetaGameService metaGameService) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
         this.gameConfigService = gameConfigService;
         this.tournamentService = tournamentService;
+        this.metaGameService = metaGameService;
         this.crashGenerator = new CrashGenerator();
         this.houseEdgeCalculator = new HouseEdgeCalculator();
     }
@@ -81,24 +87,35 @@ public class GameService {
                        GameConfigService gameConfigService,
                        CrashGenerator crashGenerator,
                        HouseEdgeCalculator houseEdgeCalculator,
-                       TournamentService tournamentService) {
+                       TournamentService tournamentService,
+                       MetaGameService metaGameService) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
         this.gameConfigService = gameConfigService;
         this.crashGenerator = crashGenerator;
         this.houseEdgeCalculator = houseEdgeCalculator;
         this.tournamentService = tournamentService;
+        this.metaGameService = metaGameService;
+    }
+
+    public GameService(UserRepository userRepository,
+                       GameRoundRepository gameRoundRepository,
+                       GameConfigService gameConfigService,
+                       CrashGenerator crashGenerator,
+                       HouseEdgeCalculator houseEdgeCalculator,
+                       TournamentService tournamentService) {
+        this(userRepository, gameRoundRepository, gameConfigService, crashGenerator, houseEdgeCalculator, tournamentService, null);
     }
 
     public GameService(UserRepository userRepository,
                        GameRoundRepository gameRoundRepository,
                        CrashGenerator crashGenerator,
                        HouseEdgeCalculator houseEdgeCalculator) {
-        this(userRepository, gameRoundRepository, null, crashGenerator, houseEdgeCalculator, null);
+        this(userRepository, gameRoundRepository, null, crashGenerator, houseEdgeCalculator, null, null);
     }
 
     public GameService(UserRepository userRepository, GameRoundRepository gameRoundRepository) {
-        this(userRepository, gameRoundRepository, null, null, null, null);
+        this(userRepository, gameRoundRepository, null, null, null, null, null);
     }
 
     private GameConfigDto getCurrentConfigOrDefault() {
@@ -400,6 +417,17 @@ public class GameService {
             round.setEndTime(now);
         }
 
+        // Начисление мета-наград (пазлы, ачивки)
+        RewardDto reward = null;
+        List<AchievementDto> unlockedAchievements = List.of();
+        if (metaGameService != null && user != null) {
+            MetaGameService.RoundMetaResult metaResult = metaGameService.processRoundCompletion(
+                    user, round, true, currentMultiplier, boosterActivated
+            );
+            reward = metaResult.reward();
+            unlockedAchievements = metaResult.unlockedAchievements();
+        }
+
         // Удаляем из in-memory кэша
         activeRounds.remove(userId);
 
@@ -421,7 +449,9 @@ public class GameService {
                 nextHe,
                 activeRound.serverSeed(),
                 activeRound.clientSeed(),
-                activeRound.nonce()
+                activeRound.nonce(),
+                reward,
+                unlockedAchievements
         );
     }
 
@@ -561,6 +591,17 @@ public class GameService {
             round.setEndTime(activeRound.crashTime().isBefore(now) ? activeRound.crashTime() : now);
         }
 
+        // Начисление мета-наград (пазлы, ачивки)
+        RewardDto reward = null;
+        List<AchievementDto> unlockedAchievements = List.of();
+        if (metaGameService != null && user != null) {
+            MetaGameService.RoundMetaResult metaResult = metaGameService.processRoundCompletion(
+                    user, round, false, finalCrashMultiplier, boosterActivated
+            );
+            reward = metaResult.reward();
+            unlockedAchievements = metaResult.unlockedAchievements();
+        }
+
         // Удаляем из памяти
         activeRounds.remove(activeRound.userId());
 
@@ -584,7 +625,9 @@ public class GameService {
                 nextHe,
                 activeRound.serverSeed(),
                 activeRound.clientSeed(),
-                activeRound.nonce()
+                activeRound.nonce(),
+                reward,
+                unlockedAchievements
         );
     }
 

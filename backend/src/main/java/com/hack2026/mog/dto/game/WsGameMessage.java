@@ -1,6 +1,9 @@
 package com.hack2026.mog.dto.game;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.hack2026.mog.dto.meta.AchievementDto;
+import com.hack2026.mog.dto.meta.RewardDto;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -22,8 +25,32 @@ public record WsGameMessage(
         Integer bonusPoints,
         Integer pointsEarned,
         Integer levelsPassed,
-        Boolean boosterActivated
+        Boolean boosterActivated,
+        RewardDto reward,
+        List<AchievementDto> unlockedAchievements
 ) {
+    public WsGameMessage(
+            String type,
+            UUID roundId,
+            Double multiplier,
+            Double crashMultiplier,
+            Long winAmount,
+            Long newBalance,
+            Long elapsedMs,
+            String message,
+            Integer level,
+            Integer boosterMultiplier,
+            Double previousMultiplier,
+            Integer bonusPoints,
+            Integer pointsEarned,
+            Integer levelsPassed,
+            Boolean boosterActivated
+    ) {
+        this(type, roundId, multiplier, crashMultiplier, winAmount, newBalance, elapsedMs, message,
+                level, boosterMultiplier, previousMultiplier, bonusPoints, pointsEarned, levelsPassed,
+                boosterActivated, null, null);
+    }
+
     public static WsGameMessage connected(Long userId, String username) {
         return new WsGameMessage("CONNECTED", null, null, null, null, null, null, "Connected to game stream: " + username, null, null, null, null, null, null, null);
     }
@@ -52,16 +79,24 @@ public record WsGameMessage(
         );
     }
 
+    public static WsGameMessage cashout(UUID roundId, double multiplier, long winAmount, long newBalance, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated, RewardDto reward, List<AchievementDto> unlockedAchievements) {
+        return new WsGameMessage("CASHOUT", roundId, multiplier, null, winAmount, newBalance, null, "Cashout successful", null, null, null, null, pointsEarned, levelsPassed, boosterActivated, reward, unlockedAchievements);
+    }
+
     public static WsGameMessage cashout(UUID roundId, double multiplier, long winAmount, long newBalance, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated) {
-        return new WsGameMessage("CASHOUT", roundId, multiplier, null, winAmount, newBalance, null, "Cashout successful", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
+        return cashout(roundId, multiplier, winAmount, newBalance, pointsEarned, levelsPassed, boosterActivated, null, null);
     }
 
     public static WsGameMessage cashout(UUID roundId, double multiplier, long winAmount, long newBalance) {
         return cashout(roundId, multiplier, winAmount, newBalance, null, null, null);
     }
 
+    public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated, Long newBalance, RewardDto reward, List<AchievementDto> unlockedAchievements) {
+        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, newBalance, elapsedMs, "Balloon crashed!", null, null, null, null, pointsEarned, levelsPassed, boosterActivated, reward, unlockedAchievements);
+    }
+
     public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated, Long newBalance) {
-        return new WsGameMessage("CRASHED", roundId, null, crashMultiplier, 0L, newBalance, elapsedMs, "Balloon crashed!", null, null, null, null, pointsEarned, levelsPassed, boosterActivated);
+        return crashed(roundId, crashMultiplier, elapsedMs, pointsEarned, levelsPassed, boosterActivated, newBalance, null, null);
     }
 
     public static WsGameMessage crashed(UUID roundId, double crashMultiplier, long elapsedMs, Integer pointsEarned, Integer levelsPassed, Boolean boosterActivated) {

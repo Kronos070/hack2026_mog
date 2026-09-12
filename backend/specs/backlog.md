@@ -15,7 +15,4 @@
 - [ ] **TOUR-2**: REST эндпоинты турнира и живого лидерборда (`GET /api/tournament`, `GET /api/tournament/leaderboard`).
 
 ## Геймификация и удержание (Мета-игра Столото)
-- [ ] **META-1**: Коллекция наград / пазлов (ТЗ §1.5) — таблица `user_puzzle_pieces`, выдача фрагментов за раунды, возврат объекта `reward` в результатах.
-- [ ] **META-2**: Расчет динамических рангов игрока по чистой прибыли (`profit = totalPayout - totalWagered`) — 6 рангов Столото.
-- [ ] **META-3**: Система достижений (10 ачивок) — таблица `user_achievements`, проверка условий и возврат `unlockedAchievements`.
-- [ ] **META-4**: Расширенная статистика профиля (`GET /api/users/me` — `roundsPlayed`, `roundsWon`, `bestMultiplier`, `totalWagered`, `totalPayout`, пазлы, ачивки, ранг).
+*Все задачи мета-игры и удержания (META-1, META-2, META-3, META-4) успешно решены. См. [backlog-resolved.md](backlog-resolved.md).*

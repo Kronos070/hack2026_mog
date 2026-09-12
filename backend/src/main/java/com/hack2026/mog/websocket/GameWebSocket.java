@@ -156,7 +156,11 @@ public class GameWebSocket {
                             : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
                     boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
                     Long newBalance = crashResolution != null ? crashResolution.newBalance() : null;
-                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance));
+                    com.hack2026.mog.dto.meta.RewardDto reward = crashResolution != null ? crashResolution.reward() : null;
+                    java.util.List<com.hack2026.mog.dto.meta.AchievementDto> unlockedAchievements = crashResolution != null && crashResolution.unlockedAchievements() != null
+                            ? crashResolution.unlockedAchievements()
+                            : java.util.List.of();
+                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance, reward, unlockedAchievements));
                     break;
                 }
 
@@ -220,7 +224,9 @@ public class GameWebSocket {
                     result.newBalance(),
                     result.pointsEarned(),
                     result.levelsPassed(),
-                    result.boosterActivated()
+                    result.boosterActivated(),
+                    result.reward(),
+                    result.unlockedAchievements()
             ));
         }
     }

@@ -38,6 +38,9 @@ public class GameRound {
     @Column(name = "booster_level")
     private Integer boosterLevel;
 
+    @Column(name = "booster_activated", nullable = false)
+    private Boolean boosterActivated = false;
+
     @Column(name = "crash_multiplier", nullable = false)
     private Double crashMultiplier;
 
@@ -128,6 +131,9 @@ public class GameRound {
         }
         if (isWin == null) {
             isWin = false;
+        }
+        if (boosterActivated == null) {
+            boosterActivated = false;
         }
     }
 
@@ -281,6 +287,14 @@ public class GameRound {
 
     public void setBoosterLevel(Integer boosterLevel) {
         this.boosterLevel = boosterLevel;
+    }
+
+    public Boolean getBoosterActivated() {
+        return boosterActivated != null ? boosterActivated : false;
+    }
+
+    public void setBoosterActivated(Boolean boosterActivated) {
+        this.boosterActivated = boosterActivated != null ? boosterActivated : false;
     }
 
     public Instant getCreatedAt() {

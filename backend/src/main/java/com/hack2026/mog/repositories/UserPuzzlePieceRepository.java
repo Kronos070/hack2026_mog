@@ -26,4 +26,8 @@ public class UserPuzzlePieceRepository implements PanacheRepository<UserPuzzlePi
     public long countByUserId(Long userId) {
         return count("user.id", userId);
     }
+
+    public long countCollectedAfter(Long userId, java.time.Instant after) {
+        return count("user.id = ?1 and collectedAt >= ?2", userId, after);
+    }
 }

@@ -36,3 +36,4 @@
 - **Конфигурация игры и админка:** [handoff-game-config.md](handoff-game-config.md) — CFG-1, админ-панель параметров игры с hot-reload.
 - **Турнирная таблица и лидерборд:** [handoff-tournament.md](handoff-tournament.md) — TOUR-1/2, турнирный скоринг и рейтинг.
 - **Мета-игра и награды:** [handoff-meta-game.md](handoff-meta-game.md) — META, коллекция пазлов, ранги, ачивки и расширенный профиль.
+- **Полигон статистики игрока:** [handoff-stats-radar.md](handoff-stats-radar.md) — RADAR-1, шестиугольник характеристик игрока в стиле Dota 2 за последние 30 игр с пересчетом каждые 10 игр.

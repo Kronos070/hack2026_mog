@@ -5,22 +5,27 @@ import com.hack2026.mog.dto.meta.ProfileDto;
 import com.hack2026.mog.dto.meta.ProfileUserDto;
 import com.hack2026.mog.dto.meta.RankDto;
 import com.hack2026.mog.dto.meta.RewardDto;
+import com.hack2026.mog.dto.meta.StatRadarDto;
 import com.hack2026.mog.entities.GameRound;
 import com.hack2026.mog.entities.User;
 import com.hack2026.mog.entities.UserAchievement;
 import com.hack2026.mog.entities.UserPuzzlePiece;
+import com.hack2026.mog.entities.UserStatRadar;
 import com.hack2026.mog.repositories.GameRoundRepository;
 import com.hack2026.mog.repositories.UserAchievementRepository;
 import com.hack2026.mog.repositories.UserPuzzlePieceRepository;
 import com.hack2026.mog.repositories.UserRepository;
+import com.hack2026.mog.repositories.UserStatRadarRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -64,6 +69,9 @@ public class MetaGameService {
     @Inject
     GameRoundRepository gameRoundRepository;
 
+    @Inject
+    UserStatRadarRepository userStatRadarRepository;
+
     public record RoundMetaResult(
             RewardDto reward,
             List<AchievementDto> unlockedAchievements
@@ -85,6 +93,9 @@ public class MetaGameService {
 
         // 2. Обработка разблокировки достижений
         List<AchievementDto> unlocked = evaluateAchievements(user, round, isWin, roundMultiplier, boosterActivated, reward);
+
+        // 3. Обновление полигона характеристик игрока (RADAR-1)
+        maybeUpdateStatRadar(user);
 
         return new RoundMetaResult(reward, unlocked);
     }
@@ -266,5 +277,201 @@ public class MetaGameService {
             case "piece_9" -> "Фрагмент 9";
             default -> "Фрагмент";
         };
+    }
+
+    @Transactional
+    public void maybeUpdateStatRadar(User user) {
+        if (user == null || user.getId() == null) return;
+        long totalCompleted = gameRoundRepository.countCompletedRoundsByUserId(user.getId());
+        if (totalCompleted <= 0) return;
+
+        if (totalCompleted <= 9 || totalCompleted % 10 == 0) {
+            recalculateStatRadar(user, totalCompleted);
+        } else {
+            userStatRadarRepository.findByUserId(user.getId()).ifPresent(radar -> {
+                int nextIn = (int) (10 - (totalCompleted % 10));
+                radar.setTotalGames(totalCompleted);
+                radar.setNextRecalcIn(nextIn);
+            });
+        }
+    }
+
+    @Transactional
+    public UserStatRadar recalculateStatRadar(User user, long totalCompleted) {
+        Long userId = user.getId();
+        List<GameRound> rounds = gameRoundRepository.findHistoryByUserId(userId, 30);
+        int n = rounds.size();
+
+        int nextIn;
+        if (totalCompleted < 10) {
+            nextIn = 10 - (int) totalCompleted;
+        } else {
+            long rem = totalCompleted % 10;
+            nextIn = rem == 0 ? 10 : (int) (10 - rem);
+        }
+
+        if (n == 0) {
+            UserStatRadar emptyRadar = userStatRadarRepository.findByUserId(userId)
+                    .orElseGet(() -> new UserStatRadar(user, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, totalCompleted, nextIn));
+            emptyRadar.setTotalGames(totalCompleted);
+            emptyRadar.setNextRecalcIn(nextIn);
+            userStatRadarRepository.persist(emptyRadar);
+            return emptyRadar;
+        }
+
+        // 1. Выдержка (Patience): средний кэф забора в победных раундах
+        List<GameRound> winningRounds = rounds.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsWin()) && r.getCashoutMultiplier() != null)
+                .toList();
+        double patience = 0.0;
+        if (!winningRounds.isEmpty()) {
+            double avgCashout = winningRounds.stream()
+                    .mapToDouble(GameRound::getCashoutMultiplier)
+                    .average()
+                    .orElse(1.0);
+            if (avgCashout > 1.0) {
+                patience = Math.min(10.0, ((avgCashout - 1.0) / 4.0) * 10.0);
+            }
+        }
+
+        // 2. Бустеры (Boosters): выбор бустера (до 5.0) + его реальная активация (до 5.0)
+        long boosterChosenCount = rounds.stream()
+                .filter(r -> r.getBoosterMultiplier() != null && r.getBoosterMultiplier() > 1)
+                .count();
+        long boosterActivatedCount = rounds.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getBoosterActivated()))
+                .count();
+        double chosenScore = ((double) boosterChosenCount / n) * 5.0;
+        double activatedScore = boosterChosenCount > 0 ? (((double) boosterActivatedCount / boosterChosenCount) * 5.0) : 0.0;
+        double boosters = Math.min(10.0, chosenScore + activatedScore);
+
+        // 3. Коллекционер (Collector): прогресс коллекции (до 7.0) + дропы за окно (до 3.0)
+        long totalPieces = userPuzzlePieceRepository.countByUserId(userId);
+        double collectionScore = (Math.min(9.0, (double) totalPieces) / 9.0) * 7.0;
+        Instant oldestRoundTime = rounds.get(rounds.size() - 1).getCreatedAt();
+        long recentDrops = oldestRoundTime != null
+                ? userPuzzlePieceRepository.countCollectedAfter(userId, oldestRoundTime)
+                : 0L;
+        double dropScore = Math.min(3.0, (double) recentDrops);
+        double collector = Math.min(10.0, collectionScore + dropScore);
+
+        // 4. Размах / Щедрость (Generosity): средний размер ставки по шкале пресетов
+        double avgBet = rounds.stream()
+                .mapToDouble(GameRound::getBetAmount)
+                .average()
+                .orElse(10.0);
+        double generosity = computeGenerosityScore(avgBet);
+
+        // 5. Винрейт (Win Rate): доля побед за окно
+        long winsCount = rounds.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsWin()))
+                .count();
+        double winRate = ((double) winsCount / n) * 10.0;
+
+        // 6. Азарт / Риск (Risk): красная тема (до 5.0) + дерзость близости к краху (до 5.0)
+        long redThemeCount = rounds.stream()
+                .filter(r -> "red".equalsIgnoreCase(r.getTheme()))
+                .count();
+        double redScore = ((double) redThemeCount / n) * 5.0;
+        double avgDaring = rounds.stream().mapToDouble(r -> {
+            if (Boolean.TRUE.equals(r.getIsWin()) && r.getCashoutMultiplier() != null && r.getCrashMultiplier() != null && r.getCrashMultiplier() > 0) {
+                return Math.min(1.0, r.getCashoutMultiplier() / r.getCrashMultiplier());
+            }
+            return 1.0; // краш до вывода = максимальный риск
+        }).average().orElse(0.5);
+        double daringScore = avgDaring * 5.0;
+        double risk = Math.min(10.0, redScore + daringScore);
+
+        // Округляем до 1 знака после запятой
+        double roundedPatience = roundOneDecimal(patience);
+        double roundedBoosters = roundOneDecimal(boosters);
+        double roundedCollector = roundOneDecimal(collector);
+        double roundedGenerosity = roundOneDecimal(generosity);
+        double roundedWinRate = roundOneDecimal(winRate);
+        double roundedRisk = roundOneDecimal(risk);
+
+        Optional<UserStatRadar> existingOpt = userStatRadarRepository.findByUserId(userId);
+        UserStatRadar radar;
+        if (existingOpt.isPresent()) {
+            radar = existingOpt.get();
+            radar.setPatience(roundedPatience);
+            radar.setBoosters(roundedBoosters);
+            radar.setCollector(roundedCollector);
+            radar.setGenerosity(roundedGenerosity);
+            radar.setWinRate(roundedWinRate);
+            radar.setRisk(roundedRisk);
+            radar.setGamesAnalyzed(n);
+            radar.setTotalGames(totalCompleted);
+            radar.setNextRecalcIn(nextIn);
+        } else {
+            radar = new UserStatRadar(user, roundedPatience, roundedBoosters, roundedCollector,
+                    roundedGenerosity, roundedWinRate, roundedRisk, n, totalCompleted, nextIn);
+            userStatRadarRepository.persist(radar);
+        }
+
+        LOG.infof("Stat radar recalculated for userId=%d: games=%d, patience=%.1f, boosters=%.1f, collector=%.1f, generosity=%.1f, winRate=%.1f, risk=%.1f, nextIn=%d",
+                userId, n, roundedPatience, roundedBoosters, roundedCollector, roundedGenerosity, roundedWinRate, roundedRisk, nextIn);
+
+        return radar;
+    }
+
+    private double computeGenerosityScore(double avgBet) {
+        if (avgBet <= 10.0) {
+            return Math.max(0.0, (avgBet / 10.0) * 1.0);
+        } else if (avgBet <= 25.0) {
+            return 1.0 + ((avgBet - 10.0) / 15.0) * 1.5;
+        } else if (avgBet <= 50.0) {
+            return 2.5 + ((avgBet - 25.0) / 25.0) * 2.5;
+        } else if (avgBet <= 100.0) {
+            return 5.0 + ((avgBet - 50.0) / 50.0) * 2.5;
+        } else if (avgBet <= 250.0) {
+            return 7.5 + ((avgBet - 100.0) / 150.0) * 2.5;
+        }
+        return 10.0;
+    }
+
+    private static double roundOneDecimal(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
+
+    @Transactional
+    public StatRadarDto getStatRadar(Long userId) {
+        if (userId == null) return null;
+        User user = userRepository.findById(userId);
+        if (user == null) return null;
+
+        Optional<UserStatRadar> radarOpt = userStatRadarRepository.findByUserId(userId);
+        if (radarOpt.isPresent()) {
+            UserStatRadar r = radarOpt.get();
+            return new StatRadarDto(
+                    r.getPatience(),
+                    r.getBoosters(),
+                    r.getCollector(),
+                    r.getGenerosity(),
+                    r.getWinRate(),
+                    r.getRisk(),
+                    r.getGamesAnalyzed(),
+                    r.getTotalGames(),
+                    r.getNextRecalcIn()
+            );
+        }
+
+        long totalCompleted = gameRoundRepository.countCompletedRoundsByUserId(userId);
+        if (totalCompleted > 0) {
+            UserStatRadar created = recalculateStatRadar(user, totalCompleted);
+            return new StatRadarDto(
+                    created.getPatience(),
+                    created.getBoosters(),
+                    created.getCollector(),
+                    created.getGenerosity(),
+                    created.getWinRate(),
+                    created.getRisk(),
+                    created.getGamesAnalyzed(),
+                    created.getTotalGames(),
+                    created.getNextRecalcIn()
+            );
+        }
+
+        return StatRadarDto.empty(0L, 10);
     }
 }

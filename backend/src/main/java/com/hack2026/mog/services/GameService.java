@@ -414,6 +414,7 @@ public class GameService {
             round.setCashoutMultiplier(currentMultiplier);
             round.setWinAmount(winAmount);
             round.setPointsEarned(pointsEarned);
+            round.setBoosterActivated(boosterActivated);
             round.setEndTime(now);
         }
 
@@ -588,6 +589,7 @@ public class GameService {
             round.setIsWin(false);
             round.setWinAmount(0L);
             round.setPointsEarned(pointsEarned);
+            round.setBoosterActivated(boosterActivated);
             round.setEndTime(activeRound.crashTime().isBefore(now) ? activeRound.crashTime() : now);
         }
 

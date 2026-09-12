@@ -1,6 +1,5 @@
 // Плашка баланса игрока над блоком ставки
 
-import { Wallet } from 'lucide-react';
 import { GlassPanel } from '@/shared/ui/GlassPanel';
 
 interface BalanceCardProps {
@@ -12,7 +11,7 @@ export function BalanceCard({ balance }: BalanceCardProps) {
   return (
     <GlassPanel title="Баланс" subtitle="Доступно бонусов" className="flex min-h-0 flex-1 basis-0 flex-col justify-center px-5 py-1">
       <div className="glass-tile flex items-center gap-3 rounded-xl px-4 py-2.5">
-        <Wallet size={26} className="shrink-0 text-accent" />
+        <img src="/images/choose/coin.webp" alt="" className="h-7 w-auto shrink-0" />
         <span className="min-w-0 flex-1 truncate text-2xl font-extrabold tabular-nums text-on-glass">
           {balance.toLocaleString('ru-RU')}
         </span>

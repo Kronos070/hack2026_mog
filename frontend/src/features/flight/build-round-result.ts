@@ -24,13 +24,13 @@ export function buildRoundResult(
     boosterActivated: message.boosterActivated ?? false,
     reward: {
       kind: 'puzzle-piece',
-      pieceId: `piece-${collected}`,
-      label: PUZZLE_PIECES[collected] ?? 'Фрагмент',
-      collected: collected + 1,
-      total: PUZZLE_TOTAL,
+      pieceId: message.reward?.pieceId ?? `piece-${collected}`,
+      label: message.reward?.label ?? PUZZLE_PIECES[collected] ?? 'Фрагмент',
+      collected: message.reward?.collected ?? collected + 1,
+      total: message.reward?.total ?? PUZZLE_TOTAL,
     },
     balance: message.newBalance ?? 0,
     finishedAt: Date.now(),
-    unlockedAchievements: [],
+    unlockedAchievements: message.unlockedAchievements ?? [],
   };
 }

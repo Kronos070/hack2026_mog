@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { RoundStart } from '@/shared/api/contract';
 import { connectGameSocket, type SocketMessage } from '@/features/flight/game-socket';
 import type { FlightSnapshot } from '@/features/flight/use-flight-engine';
-import { levelsPassedAt } from '@/shared/lib/crash-math';
+import { levelsPassedAt, progressInLevels } from '@/shared/lib/crash-math';
 import { soundManager } from '@/shared/lib/sound-manager';
 
 interface SocketFlightCallbacks {
@@ -52,7 +52,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
           }
           state.levelsPassed = passed;
         }
-        state.progress = progressFor(message.multiplier, round.levelMultipliers);
+        state.progress = progressInLevels(message.multiplier, round.levelMultipliers);
         return;
       }
 
@@ -72,7 +72,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
         state.crashed = true;
         if (typeof message.crashMultiplier === 'number') {
           state.multiplier = message.crashMultiplier;
-          state.progress = progressFor(message.crashMultiplier, round.levelMultipliers);
+          state.progress = progressInLevels(message.crashMultiplier, round.levelMultipliers);
         }
         soundManager.play('crash', 0.8);
         handlers.current.onCrash(message);
@@ -83,20 +83,4 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
   }, [round]);
 
   return { getSnapshot };
-}
-
-function progressFor(multiplier: number, levels: readonly number[]): number {
-  if (levels.length === 0) return 0;
-  const slot = 1 / (levels.length + 1);
-
-  for (let index = 0; index < levels.length; index += 1) {
-    const top = levels[index] ?? 1;
-    if (multiplier < top) {
-      const bottom = index === 0 ? 1 : (levels[index - 1] ?? 1);
-      const span = Math.log(top) - Math.log(bottom);
-      const ratio = span > 0 ? (Math.log(multiplier) - Math.log(bottom)) / span : 0;
-      return Math.min((index + Math.max(ratio, 0)) * slot, 1);
-    }
-  }
-  return Math.min(levels.length * slot + slot * 0.5, 1);
 }

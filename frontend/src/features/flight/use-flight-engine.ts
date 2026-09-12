@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { GameConfig, RoundStart } from '@/shared/api/contract';
-import { levelsPassedAt, multiplierAt } from '@/shared/lib/crash-math';
+import { levelsPassedAt, multiplierAt, progressInLevels } from '@/shared/lib/crash-math';
 import { soundManager } from '@/shared/lib/sound-manager';
 
 export interface FlightSnapshot {
@@ -17,23 +17,6 @@ interface FlightCallbacks {
   onLevel: (level: number) => void;
   onBooster: () => void;
   onCrash: () => void;
-}
-
-function progressInLevels(multiplier: number, levels: readonly number[]): number {
-  if (levels.length === 0) return 0;
-  const slot = 1 / (levels.length + 1);
-
-  for (let index = 0; index < levels.length; index += 1) {
-    const top = levels[index] ?? 1;
-    if (multiplier < top) {
-      const bottom = index === 0 ? 1 : (levels[index - 1] ?? 1);
-      const span = Math.log(top) - Math.log(bottom);
-      const ratio =
-        span > 0 ? (Math.log(multiplier) - Math.log(bottom)) / span : 0;
-      return Math.min((index + Math.max(ratio, 0)) * slot, 1);
-    }
-  }
-  return Math.min(levels.length * slot + slot * 0.5, 1);
 }
 
 export function useFlightEngine(

@@ -19,6 +19,20 @@ export interface SocketMessage {
   levelsPassed?: number;
   boosterActivated?: boolean;
   message?: string;
+  reward?: {
+    kind?: string;
+    pieceId?: string;
+    label?: string;
+    collected?: number;
+    total?: number;
+  };
+  unlockedAchievements?: {
+    id: string;
+    title: string;
+    description: string;
+    letter: string;
+    unlockedAt: number | null;
+  }[];
 }
 
 function socketUrl(): string {

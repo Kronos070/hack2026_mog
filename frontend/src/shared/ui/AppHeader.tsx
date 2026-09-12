@@ -35,7 +35,7 @@ export function AppHeader({ onOpenRules }: AppHeaderProps) {
           disabled={flying}
           className="flex shrink-0 items-center gap-3 disabled:cursor-not-allowed"
         >
-          <img src="/images/logo.webp" alt="Воздушный шар" className="-my-1 h-14 w-auto max-w-none object-contain" />
+          <img src="/images/logo.webp" alt="Воздушный шар" className="-my-2 h-20 w-[5.5rem] max-w-none object-contain" />
           <img src="/stoloto.svg" alt="Столото" className="hidden h-11 w-auto sm:block" />
         </button>
 
@@ -64,10 +64,16 @@ export function AppHeader({ onOpenRules }: AppHeaderProps) {
             </button>
           )}
           <button
-            onClick={toggleMuted}
+            onClick={(event) => {
+              toggleMuted();
+              event.currentTarget.blur();
+            }}
             title={muted ? 'Включить звук' : 'Выключить звук'}
             aria-label={muted ? 'Включить звук' : 'Выключить звук'}
-            className={cn('text-on-glass transition-colors hover:text-accent')}
+            className={cn(
+              'transition-colors hover:text-accent focus:outline-none',
+              muted ? 'text-accent' : 'text-on-glass',
+            )}
           >
             {muted ? <VolumeX size={36} /> : <Volume2 size={36} />}
           </button>

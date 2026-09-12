@@ -96,6 +96,22 @@
   button {
     font: inherit;
   }
+
+  button:not(:disabled),
+  a[href],
+  summary,
+  label[for],
+  [role='button']:not([aria-disabled='true']),
+  select,
+  input[type='checkbox'],
+  input[type='radio'] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
 }
 
 @keyframes achievement-in {

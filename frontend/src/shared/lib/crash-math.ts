@@ -60,3 +60,27 @@ function roundTo(value: number, digits: number): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
 }
+
+export function progressInLevels(multiplier: number, levels: readonly number[]): number {
+  // Доля пути по шкале; выше последнего уровня продолжается той же прогрессией
+  if (levels.length === 0) return 0;
+  const slot = 1 / (levels.length + 1);
+
+  for (let index = 0; index < levels.length; index += 1) {
+    const top = levels[index] ?? 1;
+    if (multiplier < top) {
+      const bottom = index === 0 ? 1 : (levels[index - 1] ?? 1);
+      const span = Math.log(top) - Math.log(bottom);
+      const ratio = span > 0 ? (Math.log(multiplier) - Math.log(bottom)) / span : 0;
+      return (index + Math.max(ratio, 0)) * slot;
+    }
+  }
+
+  const count = levels.length;
+  const last = levels[count - 1] ?? 1;
+  const first = levels[0] ?? 1;
+  const growth = count > 1 ? Math.pow(last / first, 1 / (count - 1)) : 2;
+  const step = Math.log(growth);
+  const over = step > 0 ? (Math.log(multiplier) - Math.log(last)) / step : 0;
+  return (count + Math.max(over, 0)) * slot;
+}

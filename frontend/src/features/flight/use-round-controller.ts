@@ -22,7 +22,7 @@ export function useRoundController() {
   const pushAchievements = useAchievementStore((state) => state.push);
   const { phase, round, result, startRound, finishRound, resetToIdle } = useRoundStore();
 
-  const [canCashout, setCanCashout] = useState(false);
+  const [canCashout, setCanCashout] = useState(true);
   const [cashedOut, setCashedOut] = useState(false);
   const [boosterHit, setBoosterHit] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -36,8 +36,7 @@ export function useRoundController() {
     if (fresh) setUser(fresh);
   }, [setUser]);
 
-  const handleLevel = useCallback((level: number) => {
-    if (level >= 1) setCanCashout(true);
+  const handleLevel = useCallback(() => {
   }, []);
 
   const handleBooster = useCallback(() => {
@@ -96,7 +95,7 @@ export function useRoundController() {
       setStarting(true);
       try {
         const started = await api.startRound({ theme, cost, boosterTier });
-        setCanCashout(false);
+        setCanCashout(true);
         setCashedOut(false);
         setBoosterHit(false);
         boosterRef.current = false;

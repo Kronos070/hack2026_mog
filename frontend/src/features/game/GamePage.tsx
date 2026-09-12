@@ -29,10 +29,16 @@ export function GamePage() {
   const controller = useRoundController();
   const { phase, round, result, config, getSnapshot } = controller;
 
-  const { data: history = [] } = useQuery({
+  const { data: allHistory = [] } = useQuery({
     queryKey: ['history'],
     queryFn: () => api.getHistory(),
   });
+
+  // Запись появляется только когда раунд действительно завершён
+  const history = useMemo(
+    () => allHistory.filter((entry) => entry.roundId !== round?.roundId),
+    [allHistory, round?.roundId],
+  );
 
   const balance = user?.balance ?? 0;
   const multipliers = config?.boosterTierValues ?? [1, 2, 3, 4];

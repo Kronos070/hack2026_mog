@@ -86,11 +86,12 @@ export const api = {
     if (USE_MOCK) return mock.mockStartRound(request);
     const { data } = await http.post('/game/start', {
       theme: request.theme,
-      cost: request.cost,
-      boosterTier: request.boosterTier,
+      betAmount: request.cost,
+      boosterMultiplier: request.boosterTier,
     });
     const parsed = roundStartResponseSchema.parse(data);
-    return toRoundStart(parsed, request.theme, buildLevelMultipliers(request.theme, DEFAULT_CONFIG));
+    const config = await this.getConfig().catch(() => DEFAULT_CONFIG);
+    return toRoundStart(parsed, request.theme, buildLevelMultipliers(request.theme, config));
   },
 
   async cashout(
@@ -128,20 +129,40 @@ export const api = {
     return profileSchema.parse({ ...mock.mockGetProfile(), user });
   },
 
-  // Ниже — то, чего на бэкенде пока нет: работает на моке
   async getConfig(): Promise<GameConfig> {
-    return gameConfigSchema.parse(mock.mockGetConfig());
+    if (USE_MOCK) return gameConfigSchema.parse(mock.mockGetConfig());
+    try {
+      const { data } = await http.get('/admin/config');
+      return gameConfigSchema.parse(data);
+    } catch {
+      // Бэкенд без этого эндпоинта — играем на локальных настройках
+      return gameConfigSchema.parse(mock.mockGetConfig());
+    }
   },
 
   async saveConfig(config: GameConfig): Promise<GameConfig> {
-    return gameConfigSchema.parse(mock.mockSaveConfig(config));
+    if (USE_MOCK) return gameConfigSchema.parse(mock.mockSaveConfig(config));
+    const { data } = await http.put('/admin/config', config);
+    return gameConfigSchema.parse(data);
   },
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
-    return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
+    if (USE_MOCK) return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
+    try {
+      const { data } = await http.get('/tournament/leaderboard', { params: { limit: 50 } });
+      return leaderboardEntrySchema.array().parse(data);
+    } catch {
+      return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
+    }
   },
 
   async getTournament(): Promise<Tournament> {
-    return tournamentSchema.parse(mock.mockGetTournament());
+    if (USE_MOCK) return tournamentSchema.parse(mock.mockGetTournament());
+    try {
+      const { data } = await http.get('/tournament');
+      return tournamentSchema.parse(data);
+    } catch {
+      return tournamentSchema.parse(mock.mockGetTournament());
+    }
   },
 };

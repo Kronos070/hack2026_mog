@@ -4,10 +4,15 @@ import type { RoundStart, Theme } from '@/shared/api/contract';
 import type { FlightSnapshot } from '@/features/flight/use-flight-engine';
 import { readScenePalette, type ScenePalette } from '@/features/flight/scene-palette';
 import { getBalloonSprite } from '@/features/flight/balloon-sprites';
+import { getBoosterSprite } from '@/features/flight/booster-sprites';
 
 const BALLOON_BOTTOM = 104;
+const BALLOON_TOP = 90;
+const SMOOTHING = 0.12;
+const CAMERA_HOLD = 0.55;
 const BALLOON_HEIGHT = 96;
 const BOOM_DURATION_MS = 700;
+const BOOSTER_ICON = 52;
 const LADDER_WIDTH = 96;
 
 export interface SceneSetup {
@@ -21,6 +26,8 @@ export class SceneRenderer {
   private particles: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   private width = 0;
   private height = 0;
+  private shownProgress = 0;
+  static smoothedProgress = 0;
   private explodedAt: number | null = null;
 
   private readonly ctx: CanvasRenderingContext2D;
@@ -50,34 +57,73 @@ export class SceneRenderer {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);
 
+    const target = snapshot?.progress ?? 0;
+    const step = 1 - Math.pow(1 - SMOOTHING, deltaMs / 16.67);
+    this.shownProgress += (target - this.shownProgress) * step;
+    SceneRenderer.smoothedProgress = this.shownProgress;
+
     this.drawLevels(snapshot);
 
     if (!this.round || !snapshot) {
       const bob = Math.sin(performance.now() / 900) * 4;
-      this.paintBalloon(height - BALLOON_BOTTOM + bob, this.accent);
+      this.shownProgress = 0;
+      this.paintBalloon(this.balloonY(0) + bob, this.accent);
       return;
     }
 
     if (snapshot.crashed) {
       if (this.explodedAt === null) {
         this.explodedAt = performance.now();
-        this.spawnParticles(snapshot.progress);
+        this.spawnParticles();
       }
-      this.drawBoom(snapshot.progress);
+      this.drawBoom();
       this.drawParticles(deltaMs);
     } else {
-      this.drawBalloon(snapshot);
+      this.drawBalloon();
     }
   }
 
+  private balloonY(progress: number): number {
+    const rest = this.height - BALLOON_BOTTOM;
+    return rest - progress * (rest - BALLOON_TOP);
+  }
+
+  // Сдвиг сцены: после порога шар замирает, а шкала уезжает вниз
+  private cameraShift(): number {
+    const over = this.shownProgress - CAMERA_HOLD;
+    if (over <= 0) return 0;
+    const rest = this.height - BALLOON_BOTTOM;
+    return over * (rest - BALLOON_TOP);
+  }
+
+  private levelY(progress: number): number {
+    return this.balloonY(progress) + this.cameraShift();
+  }
+
   private drawLevels(snapshot: FlightSnapshot | null): void {
-    const { ctx, width, height, levels } = this;
+    const { ctx, width, levels } = this;
     const count = levels.length;
     if (count === 0) return;
 
-    for (let index = 0; index < count; index += 1) {
-      const y = height - ((index + 1) / (count + 1)) * height;
-      const passed = (snapshot?.levelsPassed ?? 0) > index;
+    const slot = 1 / (count + 1);
+    // Шаг прогрессии: по нему достраиваем шкалу выше последнего уровня
+    const first = levels[0] ?? 1;
+    const last = levels[count - 1] ?? 1;
+    const ratio = count > 1 ? Math.pow(last / first, 1 / (count - 1)) : 2;
+
+    // Сколько слотов видно над последним уровнем при текущем сдвиге камеры
+    const extra = Math.max(Math.ceil(this.cameraShift() / (slot * (this.height - BALLOON_BOTTOM - BALLOON_TOP))) + 1, 0);
+    const total = count + extra;
+
+    ctx.textBaseline = 'middle';
+
+    for (let index = 0; index < total; index += 1) {
+      const y = this.levelY((index + 1) * slot);
+      if (y < -40 || y > this.height + 40) continue;
+
+      const beyond = index >= count;
+      const value = beyond ? last * Math.pow(ratio, index - count + 1) : (levels[index] ?? 1);
+      const passed = !beyond && (snapshot?.levelsPassed ?? 0) > index;
 
       ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = passed ? 2 : 1;
@@ -86,29 +132,83 @@ export class SceneRenderer {
       ctx.lineTo(width - 12, y);
       ctx.stroke();
 
-      if (this.round?.boosterLevel === index + 1) {
+      // Подписи продолжения рисуем на канвасе: DOM-шкала знает только базовые уровни
+      if (beyond) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.font = 'bold 15px ui-sans-serif, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`x ${value.toFixed(2)}`, LADDER_WIDTH / 2, y);
+        ctx.textAlign = 'left';
+        ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      }
+
+      if (!beyond && this.round?.boosterLevel === index + 1) {
         this.drawBoosterMarker(y, snapshot?.boosterActivated ?? false);
       }
     }
+
+    ctx.textBaseline = 'alphabetic';
   }
 
   private drawBoosterMarker(y: number, activated: boolean): void {
     const { ctx, width } = this;
-    ctx.fillStyle = activated ? '#eab308' : '#6b7280';
-    ctx.beginPath();
-    ctx.arc(width - 32, y, 8, 0, Math.PI * 2);
-    ctx.fill();
+    const multiplier = this.round?.boosterMultiplier ?? 1;
+    const tier = Math.max(Math.round(multiplier), 1);
+    const x = (LADDER_WIDTH + width) / 2;
+    const sprite = getBoosterSprite(tier);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px ui-sans-serif, system-ui, sans-serif';
+    const time = performance.now();
+    const bob = Math.sin(time / 520) * 5;
+    const tilt = Math.sin(time / 760) * 0.09;
+    const pulse = 1 + Math.sin(time / 430) * 0.06;
+    const glow = 12 + Math.sin(time / 300) * 6;
+
+    ctx.save();
+    ctx.globalAlpha = activated ? 1 : 0.75;
+    ctx.translate(x, y + bob);
+    ctx.rotate(tilt);
+    ctx.scale(pulse, pulse);
+
+    if (sprite) {
+      const h = BOOSTER_ICON;
+      const w = (sprite.naturalWidth / sprite.naturalHeight) * h;
+      ctx.shadowColor = activated ? 'rgba(245, 179, 36, 0.95)' : 'rgba(255, 255, 255, 0.5)';
+      ctx.shadowBlur = activated ? glow + 10 : glow * 0.5;
+      ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+    } else {
+      ctx.fillStyle = activated ? '#eab308' : '#6b7280';
+      ctx.beginPath();
+      ctx.arc(0, 0, BOOSTER_ICON / 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    // Вспышка-ореол в момент срабатывания бустера
+    if (activated) {
+      const ring = (time % 1200) / 1200;
+      ctx.save();
+      ctx.globalAlpha = (1 - ring) * 0.5;
+      ctx.strokeStyle = '#f5b324';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(x, y + bob, BOOSTER_ICON * (0.5 + ring * 0.7), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = activated ? '#f5b324' : 'rgba(255, 255, 255, 0.85)';
+    ctx.font = 'bold 15px ui-sans-serif, system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`x${this.round?.boosterMultiplier ?? 1}`, width - 32, y);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`x${multiplier}`, x, y + bob + BOOSTER_ICON / 2 + 14);
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
   }
 
-  private drawBalloon(snapshot: FlightSnapshot): void {
-    this.paintBalloon(this.height - snapshot.progress * this.height - 26, this.accent);
+  private drawBalloon(): void {
+    this.paintBalloon(this.balloonY(Math.min(this.shownProgress, CAMERA_HOLD)), this.accent);
   }
 
   private paintBalloon(y: number, accent: string): void {
@@ -138,9 +238,9 @@ export class SceneRenderer {
     ctx.restore();
   }
 
-  private spawnParticles(progress: number): void {
+  private spawnParticles(): void {
     const x = this.width / 2;
-    const y = this.height - progress * this.height - 26;
+    const y = this.balloonY(Math.min(this.shownProgress, CAMERA_HOLD));
     this.particles = Array.from({ length: 28 }, () => ({
       x,
       y,
@@ -150,21 +250,21 @@ export class SceneRenderer {
     }));
   }
 
-  private drawBoom(progress: number): void {
+  private drawBoom(): void {
     const sprite = getBalloonSprite(this.theme, 'boom');
     if (!sprite || this.explodedAt === null) return;
 
     const elapsed = performance.now() - this.explodedAt;
     if (elapsed > BOOM_DURATION_MS) return;
 
-    const { ctx, width, height } = this;
+    const { ctx, width } = this;
     const scale = 1 + (elapsed / BOOM_DURATION_MS) * 0.4;
     const spriteHeight = BALLOON_HEIGHT * scale;
     const spriteWidth = (sprite.naturalWidth / sprite.naturalHeight) * spriteHeight;
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, 1 - elapsed / BOOM_DURATION_MS);
-    ctx.translate(width / 2, height - progress * height - 26);
+    ctx.translate(width / 2, this.balloonY(Math.min(this.shownProgress, CAMERA_HOLD)));
     ctx.drawImage(sprite, -spriteWidth / 2, -spriteHeight / 2, spriteWidth, spriteHeight);
     ctx.restore();
   }

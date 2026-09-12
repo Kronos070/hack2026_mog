@@ -155,13 +155,17 @@ public class GameWebSocket {
                             ? crashResolution.levelsPassed()
                             : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
                     boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
-
-                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster));
+                    Long newBalance = crashResolution != null ? crashResolution.newBalance() : null;
+                    com.hack2026.mog.dto.meta.RewardDto reward = crashResolution != null ? crashResolution.reward() : null;
+                    java.util.List<com.hack2026.mog.dto.meta.AchievementDto> unlockedAchievements = crashResolution != null && crashResolution.unlockedAchievements() != null
+                            ? crashResolution.unlockedAchievements()
+                            : java.util.List.of();
+                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance, reward, unlockedAchievements));
                     break;
                 }
 
-                // Текущий базовый множитель по экспоненциальной формуле
-                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, GameService.DEFAULT_GROWTH_RATE);
+                // Текущий базовый множитель по экспоненциальной формуле с динамическим growthRate
+                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, activeRound.growthRate());
                 double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
 
                 // Проверка достижения уровня бустера
@@ -172,7 +176,7 @@ public class GameWebSocket {
                             boosterActivated = true;
                             double previousMultiplier = baseMultiplier;
                             double currentMultiplier = CrashGenerator.floorTo2Decimals(previousMultiplier * boosterMultiplier);
-                            int bonusPoints = boosterMultiplier * 10;
+                            int bonusPoints = activeRound.pointsBoosterBonus();
 
                             LOG.infof("Booster activated for user %d: level=%d, mult=x%d, prev=%.2f, curr=%.2f, points=%d",
                                     userId, boosterLevel, boosterMultiplier, previousMultiplier, currentMultiplier, bonusPoints);
@@ -220,7 +224,9 @@ public class GameWebSocket {
                     result.newBalance(),
                     result.pointsEarned(),
                     result.levelsPassed(),
-                    result.boosterActivated()
+                    result.boosterActivated(),
+                    result.reward(),
+                    result.unlockedAchievements()
             ));
         }
     }

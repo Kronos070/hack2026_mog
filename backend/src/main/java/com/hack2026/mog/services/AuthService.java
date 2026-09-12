@@ -16,6 +16,8 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class AuthService {
 
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(AuthService.class);
+
     @Inject
     UserRepository userRepository;
 
@@ -55,6 +57,7 @@ public class AuthService {
         }
 
         userRepository.persist(user);
+        LOG.infof("User registered: id=%d, username=%s, email=%s", user.getId(), user.getUsername(), user.getEmail());
 
         String token = tokenService.generateToken(user);
         return AuthResponse.bearer(
@@ -72,6 +75,8 @@ public class AuthService {
         if (!BcryptUtil.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Неверный логин или пароль");
         }
+
+        LOG.infof("User login success: id=%d, username=%s, role=%s", user.getId(), user.getUsername(), user.getRole());
 
         String token = tokenService.generateToken(user);
         return AuthResponse.bearer(

@@ -51,6 +51,9 @@ public class User {
     @Column(name = "points", nullable = false)
     private Long points = 0L;
 
+    @Column(name = "puzzle_pity", nullable = false)
+    private Integer puzzlePity = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -207,5 +210,13 @@ public class User {
 
     public void setPoints(Long points) {
         this.points = points != null ? points : 0L;
+    }
+
+    public Integer getPuzzlePity() {
+        return puzzlePity != null ? puzzlePity : 0;
+    }
+
+    public void setPuzzlePity(Integer puzzlePity) {
+        this.puzzlePity = puzzlePity != null ? puzzlePity : 0;
     }
 }

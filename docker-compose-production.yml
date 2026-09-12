@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-dockerhub.timeweb.cloud/library/postgres:16-alpine}
+    container_name: mog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mog_db}
+      POSTGRES_USER: ${POSTGRES_USER:-mog_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # В целях безопасности в продакшене порт БД закрыт снаружи
+    # и доступен только внутри Docker-сети mog-network.
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mog_user} -d $${POSTGRES_DB:-mog_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mog-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: mog-backend
+    restart: unless-stopped
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-mog_db}
+      QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER:-mog_user}
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      QUARKUS_HTTP_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+    # Порт 8080 открыт только внутри сети Docker для Caddy
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mog-network
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    container_name: mog-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP (используется для ACME HTTP-01 challenge и редиректа на HTTPS)
+      - "443:443"     # HTTPS (TLS)
+      - "443:443/udp" # HTTP/3 (QUIC)
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # Обязательно для сохранения SSL сертификатов между перезапусками
+      - caddy_config:/config
+    depends_on:
+      - backend
+    networks:
+      - mog-network
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  mog-network:
+    driver: bridge

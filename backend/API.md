@@ -1,6 +1,6 @@
 # MOG Backend API & WebSocket Specification (Authoritative Reference)
 
-> **Статус документа:** Актуален · Версия: 1.1.0 · Среда: Quarkus 3.x / Java 21 Loom / PostgreSQL 16  
+> **Статус документа:** Актуален · Версия: 1.2.0 · Среда: Quarkus 3.x / Java 21 Loom / PostgreSQL 16  
 > **Целевая аудитория:** AI-агенты, фронтенд-разработчики, тестировщики и интеграторы.  
 > **Базовый HTTP URL:** `http://localhost:8080`  
 > **Базовый WebSocket URL:** `ws://localhost:8080`
@@ -16,7 +16,9 @@
    $$M(t) = 1.00 \cdot e^{k \cdot t_{sec}} \quad \text{где } k = 0.06$$
    При $k = 0.06$ множитель $2.00\times$ достигается за $\approx 11.55$ секунд. Время краха:
    $$t_{crash} = \frac{\ln(M_{crash})}{k}$$
-5. **Real-time стриминг:** Сервер пушит тики множителя по WebSocket с частотой **60 FPS** (интервал $\approx 16$ мс) на легковесных виртуальных потоках (Virtual Threads).
+5. **Real-time стриминг:**
+   - **WebSocket (60 FPS):** Сервер пушит тики множителя полета по WebSocket с частотой 60 кадров/сек (интервал $\approx 16$ мс) на легковесных виртуальных потоках.
+   - **Server-Sent Events (1 Гц):** Потоковая трансляция актуальной турнирной таблицы и лидерборда в реальном времени с периодичностью 1 раз в секунду вместо клиентского polling.
 
 ---
 
@@ -48,12 +50,21 @@
 | `GET` | `/api/admin/config` | JWT | Чтение текущей конфигурации игры (кэш в RAM, O(1)) |
 | `PUT` | `/api/admin/config` | ADMIN | Горячее сохранение конфигурации игры (Hot-Reload) |
 | `POST` | `/api/admin/config/reset` | ADMIN | Сброс конфигурации к эталонным дефолтным значениям |
+| `GET` | `/api/tournament` | Опц. | Полная турнирная таблица, призовые места топ-3 и таймер endsAt |
+| `GET` | `/api/tournament/leaderboard` | Нет | Компактный рейтинг участников лидерборда (`?limit=50`) |
 
 ### 2.2. WebSocket
 
 | Протокол | Эндпоинт | Auth | Описание |
 |---|---|:---:|---|
 | `WS` | `/ws/game?token=<jwt>` | Query JWT | Полнодуплексный 60 FPS стрим тиков, бустеров и краха |
+
+### 2.3. Server-Sent Events (SSE)
+
+| Протокол | Эндпоинт | Auth | Описание |
+|---|---|:---:|---|
+| `SSE` | `/api/tournament/leaderboard/stream` | Нет | Потоковый 1 Гц SSE-стрим компактного рейтинга лидеров |
+| `SSE` | `/api/tournament/stream` | Нет | Потоковый 1 Гц SSE-стрим полной турнирной таблицы и призов |
 
 ---
 
@@ -447,7 +458,7 @@
 
 ---
 
-### 3.5. Управление конфигурацией игры (Admin Config & Hot-Reload)
+### 3.6. Управление конфигурацией игры (Admin Config & Hot-Reload)
 
 Модуль управления динамическими параметрами игры согласно ТЗ §1.9. Обеспечивает чтение параметров за $O(1)$ без нагрузки на базу данных на тиках WebSocket и горячее обновление без рестарта сервера.
 
@@ -492,6 +503,89 @@
 Сброс параметров игры к эталонным заводским настройкам (ТЗ §1.9).
 - **Headers:** `Authorization: Bearer <jwt_token>` (роль `ADMIN`)
 - **Ответ `200 OK`:** Сброшенный объект `GameConfigDto` с дефолтными значениями.
+
+---
+
+### 3.7. Турнирная таблица и лидерборд (`/api/tournament/*`)
+
+Модуль турнира и живого рейтинга. Обеспечивает учет очков игроков, суточный таймер турнира и расчет динамических призов для топ-3 участников.
+
+#### `GET /api/tournament`
+Получение полной информации о текущем турнире, таймере окончания, призах и списке участников.
+- **Headers:** `Authorization: Bearer <jwt_token>` (опционально: при передаче токена поле `currentPlayerId` заполняется ID авторизованного игрока для подсветки строки «вы» в UI; при анонимном запросе возвращается `null`).
+- **Ответ `200 OK` (`TournamentResponseDto`):**
+```json
+{
+  "title": "Гран-при Воздухоплавателей Столото",
+  "endsAt": 1789246799000,
+  "entries": [
+    {
+      "place": 1,
+      "playerId": "7",
+      "playerName": "alex_pilot",
+      "points": 3450,
+      "prize": 3450
+    },
+    {
+      "place": 2,
+      "playerId": "8",
+      "playerName": "sky_queen",
+      "points": 2890,
+      "prize": 1734
+    },
+    {
+      "place": 3,
+      "playerId": "9",
+      "playerName": "wind_master",
+      "points": 2410,
+      "prize": 723
+    },
+    {
+      "place": 4,
+      "playerId": "10",
+      "playerName": "aero_star",
+      "points": 1980,
+      "prize": 0
+    }
+  ],
+  "currentPlayerId": "42"
+}
+```
+*Ключевые поля:*
+- `title`: название текущего турнира («Гран-при Воздухоплавателей Столото»).
+- `endsAt`: timestamp завершения текущего турнира в epoch миллисекундах (конец суток 23:59:59 MSK).
+- `entries`: отсортированный по убыванию очков список участников (до 50 записей).
+- `place`: позиция участника в таблице (1, 2, 3...).
+- `prize`: динамический призовой фонд в бонусах (рассчитывается только для топ-3: 1 место — 100%, 2 место — 60%, 3 место — 30% от набранных очков; начиная с 4 места — 0).
+- `currentPlayerId`: ID авторизованного пользователя в виде строки или `null` при анонимном обращении.
+
+---
+
+#### `GET /api/tournament/leaderboard`
+Получение компактного списка лидеров для виджета на главной странице или отдельного экрана живого рейтинга.
+- **Query-параметры:**
+  - `limit` (int, опционально, по умолчанию `50`): количество возвращаемых записей в топе.
+- **Headers:** Не требуются (публичный эндпоинт).
+- **Ответ `200 OK` (`List<LeaderboardEntryDto>`):**
+```json
+[
+  {
+    "playerId": "7",
+    "playerName": "alex_pilot",
+    "points": 3450
+  },
+  {
+    "playerId": "8",
+    "playerName": "sky_queen",
+    "points": 2890
+  },
+  {
+    "playerId": "9",
+    "playerName": "wind_master",
+    "points": 2410
+  }
+]
+```
 
 ---
 
@@ -606,9 +700,97 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
 
 ---
 
-## 5. Механика уровней, бустеров и очков (CASE.md)
+## 5. Спецификация Server-Sent Events (SSE) API (`/api/tournament/*/stream`)
 
-### 5.1. Темы и уровни
+Server-Sent Events (SSE) обеспечивают потоковую доставку турнирной таблицы и живого рейтинга в реальном времени взамен короткого HTTP-поллинга.
+
+### 5.1. Архитектура и транспорт
+- **Протокол:** HTTP Server-Sent Events (`Accept: text/event-stream`, ответ `Content-Type: text/event-stream;charset=UTF-8`).
+- **Частота тиков:** Ровно **1 Гц** (каждую 1.0 секунду) с моментальным стартовым снимком при подключении (задержка первого тика $\le 10$ мс).
+- **Пул потоков:** Обработка тиков и формирование снимков производятся реактивным движком SmallRye Mutiny на пуле рабочих потоков (`Infrastructure.getDefaultWorkerPool()`), что полностью исключает блокировку реактивного цикла Vert.x EventLoop.
+- **Изоляция L1-кэша:** Перед каждой выборкой лидеров выполняется сброс контекста постоянства (`EntityManager.clear()`), что гарантирует моментальное отражение очков, начисленных в фоновом режиме через нативный SQL UPSERT игрового движка.
+- **Авторизация:** Стримы полностью **публичны** (`currentPlayerId` в широковещательном потоке всегда `null`). Клиент сопоставляет строки со своим локальным `user.id` из сессионного хранилища и подсвечивает строку игрока («вы»).
+- **Отказоустойчивость:** При разрыве соединения браузерный `EventSource` выполняет автоматический реконнект без потери состояния.
+
+---
+
+### 5.2. Стрим компактного рейтинга `GET /api/tournament/leaderboard/stream`
+Транслирует актуальный снимок топ-50 участников для виджета рейтинга или страницы `/leaderboard`.
+- **Формат события:**
+```http
+HTTP/1.1 200 OK
+Content-Type: text/event-stream;charset=UTF-8
+
+data:[{"playerId":"7","playerName":"alex_pilot","points":3450},{"playerId":"8","playerName":"sky_queen","points":2890},{"playerId":"9","playerName":"wind_master","points":2410}]
+
+data:[{"playerId":"7","playerName":"alex_pilot","points":3450},{"playerId":"8","playerName":"sky_queen","points":2890},{"playerId":"9","playerName":"wind_master","points":2410}]
+```
+- **Тело события:** Массив объектов `LeaderboardEntryDto`:
+  - `playerId` (string): ID игрока;
+  - `playerName` (string): имя пользователя;
+  - `points` (number): набранные турнирные очки.
+
+---
+
+### 5.3. Стрим турнирной таблицы `GET /api/tournament/stream`
+Транслирует полную турнирную таблицу с расчетом призовых мест и таймером до конца суток.
+- **Формат события:**
+```http
+HTTP/1.1 200 OK
+Content-Type: text/event-stream;charset=UTF-8
+
+data:{"title":"Гран-при Воздухоплавателей Столото","endsAt":1789246799000,"entries":[{"place":1,"playerId":"7","playerName":"alex_pilot","points":3450,"prize":3450},{"place":2,"playerId":"8","playerName":"sky_queen","points":2890,"prize":1734},{"place":3,"playerId":"9","playerName":"wind_master","points":2410,"prize":723},{"place":4,"playerId":"10","playerName":"aero_star","points":1980,"prize":0}],"currentPlayerId":null}
+```
+- **Тело события:** Объект `TournamentResponseDto` (с динамическими призами для топ-3).
+
+---
+
+### 5.4. Пример интеграции на клиенте (TypeScript / React)
+
+```typescript
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { LeaderboardEntryDto, TournamentResponseDto } from './contract';
+
+export function useTournamentStreams(baseUrl = 'http://localhost:8080') {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // 1. Стрим живого рейтинга (Leaderboard)
+    const esLeaderboard = new EventSource(`${baseUrl}/api/tournament/leaderboard/stream`);
+    esLeaderboard.onmessage = (event) => {
+      try {
+        const data: LeaderboardEntryDto[] = JSON.parse(event.data);
+        queryClient.setQueryData(['leaderboard'], data);
+      } catch (err) {
+        console.error('Failed to parse leaderboard SSE event', err);
+      }
+    };
+
+    // 2. Стрим полной турнирной таблицы (Tournament)
+    const esTournament = new EventSource(`${baseUrl}/api/tournament/stream`);
+    esTournament.onmessage = (event) => {
+      try {
+        const data: TournamentResponseDto = JSON.parse(event.data);
+        queryClient.setQueryData(['tournament'], data);
+      } catch (err) {
+        console.error('Failed to parse tournament SSE event', err);
+      }
+    };
+
+    return () => {
+      esLeaderboard.close();
+      esTournament.close();
+    };
+  }, [baseUrl, queryClient]);
+}
+```
+
+---
+
+## 6. Механика уровней, бустеров и очков (CASE.md)
+
+### 6.1. Темы и уровни
 
 | Параметр | Зеленая тема (`"green"`) | Красная тема (`"red"`) |
 |---|:---:|:---:|
@@ -616,22 +798,30 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
 | **Разблокировка Cashout** | **Уровень 1 ($1.20\times$)** | **Уровень 1 ($1.15\times$)** |
 | **Пороги уровней** | 1.20, 1.50, 2.00, 2.60, 3.50, 5.00, 7.50, 12.00, 20.00 | 1.15, 1.35, 1.65, 2.10, 2.80, 3.80, 5.20, 7.20, 10.50, 16.00, 25.00, 50.00 |
 
-### 5.2. Правила начисления очков
+### 6.2. Правила начисления очков
 - За каждый пересеченный уровень: `+10 очков`.
 - За активацию бустера: `+ (boosterMultiplier * 10) очков`.
 - За успешный кэшаут (фиксация выигрыша): `+50 очков`.
 - При крахе без кэшаута: начисляются очки только за фактически пройденные уровни (и активированный бустер, если он был пройден до взрыва).
 
-### 5.3. Правила бустеров
+### 6.3. Правила бустеров
 1. При выборе ставки с бустером ($\times 2, \times 3, \times 4$) сервер случайно и честно выбирает уровень размещения маркера бустера: от 2-го уровня до $(totalLevels - 2)$.
 2. Если шар пересекает уровень бустера **до** того, как игрок нажал «Забрать»:
    - Коэффициент мгновенно умножается на `boosterMultiplier`.
    - В WebSocket летит событие `BOOSTER_ACTIVATED`.
 3. Если игрок нажал «Забрать» **до** уровня бустера, бустер **не** активируется (даже когда шар долетит до него в визуальном продолжении полета).
 
+### 6.4. Динамическая сетка призов турнира
+На призовых местах могут находиться одновременно **только 3 пользователя**:
+- **1 место:** 100% от набранных очков участника (`prize = points`).
+- **2 место:** 60% от набранных очков участника (`prize = Math.round(points * 0.6)`).
+- **3 место:** 30% от набранных очков участника (`prize = Math.round(points * 0.3)`).
+- **4+ места:** призовые бонусы не начисляются (`prize = 0`).
+- **Период турнира:** суточный турнир с таймером окончания `endsAt`, указывающим на 23:59:59 MSK (`Europe/Moscow`) текущих суток.
+
 ---
 
-## 6. Математическая модель Provably Fair и House Edge
+## 7. Математическая модель Provably Fair и House Edge
 
 ### 6.1. Provably Fair генерация точки краха (HMAC-SHA256)
 Сервер рассчитывает коэффициент краха до старта раунда:
@@ -656,7 +846,7 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
 
 ---
 
-## 7. TypeScript контракты (Интерфейсы для фронтенда)
+## 8. TypeScript контракты (Интерфейсы для фронтенда)
 
 ```typescript
 // ==================== REST Contracts ====================
@@ -769,6 +959,29 @@ export interface PlayerHouseEdgeResponse {
   lastBetAmount: number | null;
 }
 
+// ==================== Tournament & Leaderboard Contracts ====================
+
+export interface LeaderboardEntryDto {
+  playerId: string;
+  playerName: string;
+  points: number;
+}
+
+export interface TournamentTableEntryDto {
+  place: number;
+  playerId: string;
+  playerName: string;
+  points: number;
+  prize: number;
+}
+
+export interface TournamentResponseDto {
+  title: string;
+  endsAt: number; // epoch ms (23:59:59 MSK)
+  entries: TournamentTableEntryDto[];
+  currentPlayerId: string | null;
+}
+
 // ==================== WebSocket Contracts ====================
 
 export type WsMessageType =
@@ -801,7 +1014,7 @@ export interface WsGameMessage {
 
 ---
 
-## 8. Клиентская проверка Provably Fair (TypeScript)
+## 9. Клиентская проверка Provably Fair (TypeScript)
 
 Для проверки честности любого сыгранного раунда клиент может локально выполнить вычисление:
 
@@ -843,7 +1056,7 @@ export function verifyRound(
 
 ---
 
-## 9. Формат сообщений об ошибках (`ErrorResponse`)
+## 10. Формат сообщений об ошибках (`ErrorResponse`)
 
 В случае ошибок REST API всегда возвращает стандартизированный JSON:
 

@@ -31,6 +31,10 @@ public class GameRoundRepository implements PanacheRepositoryBase<GameRound, UUI
         return count("user.id = ?1", userId);
     }
 
+    public long countCompletedRoundsByUserId(Long userId) {
+        return count("user.id = ?1 and status != ?2", userId, GameRound.STATUS_IN_PROGRESS);
+    }
+
     public record UserGameStats(
             long roundsPlayed,
             long roundsWon,

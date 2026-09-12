@@ -59,6 +59,21 @@ public class UserResource {
         return profile;
     }
 
+    @GET
+    @Path("/me/radar-stats")
+    @Authenticated
+    @RunOnVirtualThread
+    @SecurityRequirement(name = "jwtAuth")
+    @Operation(summary = "Получить полигон характеристик текущего пользователя", description = "Возвращает шестиугольник характеристик (выдержка, бустеры, коллекционер, щедрость, винрейт, риск) за последние 30 игр")
+    public com.hack2026.mog.dto.meta.StatRadarDto getMyRadarStats() {
+        Long currentUserId = securityService.getCurrentUserId();
+        com.hack2026.mog.dto.meta.StatRadarDto radar = metaGameService.getStatRadar(currentUserId);
+        if (radar == null) {
+            throw new com.hack2026.mog.exceptions.NotFoundException("Пользователь не найден");
+        }
+        return radar;
+    }
+
     @PUT
     @Path("/me")
     @Authenticated
@@ -104,6 +119,18 @@ public class UserResource {
             throw new com.hack2026.mog.exceptions.NotFoundException("Пользователь с id " + id + " не найден");
         }
         return profile;
+    }
+
+    @GET
+    @Path("/{id}/radar-stats")
+    @RunOnVirtualThread
+    @Operation(summary = "Получить полигон характеристик пользователя по ID", description = "Возвращает публичный шестиугольник характеристик пользователя по его идентификатору")
+    public com.hack2026.mog.dto.meta.StatRadarDto getUserRadarStatsById(@PathParam("id") Long id) {
+        com.hack2026.mog.dto.meta.StatRadarDto radar = metaGameService.getStatRadar(id);
+        if (radar == null) {
+            throw new com.hack2026.mog.exceptions.NotFoundException("Пользователь с id " + id + " не найден");
+        }
+        return radar;
     }
 
     @GET

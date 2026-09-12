@@ -34,10 +34,10 @@ export function FlightOverlay({
 
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4">
-      <div className="rounded-lg bg-paper/85 py-1 text-center backdrop-blur-sm">
+      <div className="glass-panel rounded-xl py-1.5 text-center">
         <MultiplierDisplay getSnapshot={getSnapshot} />
         {boosterHit && (
-          <p className="mt-1 text-sm font-medium text-gold">Бустер x{round.boosterMultiplier}</p>
+          <p className="mt-1 text-sm font-bold text-accent">Бустер x{round.boosterMultiplier}</p>
         )}
       </div>
 

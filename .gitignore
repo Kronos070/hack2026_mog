@@ -5,3 +5,4 @@ chto mb budet
 .env.local
 .env.*.local
 !.env.*.example
+chto mb budet.playwright-mcp/

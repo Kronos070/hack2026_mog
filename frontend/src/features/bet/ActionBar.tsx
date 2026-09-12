@@ -1,4 +1,4 @@
-// Панель действий: повтор ставки, главная кнопка раунда и экспресс-ставка
+// Панель действий: повтор и экспресс-ставка над главной кнопкой раунда
 
 import { Button } from '@/shared/ui/Button';
 
@@ -27,50 +27,47 @@ export function ActionBar({
   onRepeat,
   onExpress,
 }: ActionBarProps) {
-  // Держит главную кнопку по центру, подменяя «Начать» на «Забрать» в полёте
+  // Подменяет «Начать» на «Забрать» во время полёта
   return (
-    <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-      <div className="flex sm:justify-end">
+    <div className="mt-10 grid shrink-0 gap-5">
+      <div className="grid grid-cols-2 gap-4">
         <Button
-          variant="outline"
+          variant="glass"
           disabled={flying || !hasLastBet}
           onClick={onRepeat}
-          className="w-full sm:w-auto"
+          className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
         >
           Повторить ставку
+        </Button>
+        <Button
+          variant="glass"
+          disabled={flying}
+          onClick={onExpress}
+          className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
+        >
+          Экспресс-ставка
         </Button>
       </div>
 
       {flying ? (
         <Button
-          variant="success"
+          variant="gold"
           disabled={!canCashout || cashedOut}
           onClick={onCashout}
-          className="w-full px-10 py-3.5 text-lg sm:w-auto sm:min-w-56"
+          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
         >
           {cashedOut ? 'Выигрыш зафиксирован' : 'Забрать'}
         </Button>
       ) : (
         <Button
-          variant="success"
+          variant="gold"
           disabled={!canStart || starting}
           onClick={onStart}
-          className="w-full px-10 py-3.5 text-lg sm:w-auto sm:min-w-56"
+          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
         >
           {starting ? 'Запуск…' : 'Начать'}
         </Button>
       )}
-
-      <div className="flex sm:justify-start">
-        <Button
-          variant="outline"
-          disabled={flying}
-          onClick={onExpress}
-          className="w-full sm:w-auto"
-        >
-          Экспресс-ставка
-        </Button>
-      </div>
     </div>
   );
 }

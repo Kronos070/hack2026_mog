@@ -117,3 +117,156 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Токены игрового дизайна: стеклянные панели поверх неба */
+@theme {
+  --color-glass: var(--c-glass);
+  --color-glass-strong: var(--c-glass-strong);
+  --color-glass-line: var(--c-glass-line);
+  --color-sky-deep: var(--c-sky-deep);
+  --color-accent: var(--c-accent);
+  --color-accent-dark: var(--c-accent-dark);
+  --color-pick: var(--c-pick);
+  --color-pick-dark: var(--c-pick-dark);
+  --color-slate-btn: var(--c-slate-btn);
+  --color-on-glass: var(--c-on-glass);
+  --color-on-glass-dim: var(--c-on-glass-dim);
+}
+
+:root {
+  --c-glass: rgb(63 88 119 / 0.52);
+  --c-glass-strong: rgb(73 99 128 / 0.58);
+  --c-glass-line: rgb(203 210 218 / 0.85);
+  --c-sky-deep: #0d2a4a;
+  --c-accent: #f5b324;
+  --c-accent-dark: #d79323;
+  --c-pick: #6ec81e;
+  --c-pick-dark: #4e9b12;
+  --c-slate-btn: #1b2233;
+  --c-on-glass: #ffffff;
+  --c-on-glass-dim: rgb(220 236 255 / 0.72);
+}
+
+@layer components {
+  .glass-edge {
+    position: relative;
+  }
+
+  .glass-panel {
+    position: relative;
+    background:
+      radial-gradient(
+        ellipse 75% 75% at 50% 50%,
+        rgb(40 62 90 / 0.55) 0%,
+        rgb(48 72 103 / 0.4) 55%,
+        rgb(72 104 142 / 0.12) 100%
+      ),
+      var(--color-glass);
+    border: none;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  .glass-tile {
+    background: var(--color-glass-strong);
+    border: 1px solid rgb(104 136 172 / 0.55);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+
+  .level-mark {
+    text-shadow: 0 2px 5px rgb(4 20 40 / 0.85);
+    transition: color 0.25s ease;
+  }
+
+  .level-mark.is-passed {
+    color: var(--color-accent);
+  }
+
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel-title {
+    color: var(--color-on-glass);
+    text-shadow: 0 2px 6px rgb(4 20 40 / 0.6);
+  }
+}
+
+/* Анимации стартового экрана: плавающие облака и парящие птицы */
+@keyframes drift-left {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(210px, -82px, 0); }
+}
+
+@keyframes drift-right {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-235px, -92px, 0); }
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(180px, -107px, 0); }
+}
+
+@keyframes float-back {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-190px, -102px, 0); }
+}
+
+@keyframes bird-glide {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(18px, -22px, 0) rotate(-4deg); }
+}
+
+@keyframes balloon-sway {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-2.5deg); }
+  50% { transform: translate3d(14px, -26px, 0) rotate(2.5deg); }
+}
+
+@keyframes balloon-sway-alt {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(2deg); }
+  50% { transform: translate3d(-16px, -30px, 0) rotate(-2deg); }
+}
+
+@keyframes title-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -12px, 0); }
+}
+
+.anim-drift-left,
+.anim-drift-right,
+.anim-float-soft,
+.anim-float-back,
+.anim-bird-left,
+.anim-bird-right,
+.anim-balloon-sway,
+.anim-balloon-sway-alt {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.anim-drift-left { animation: drift-left 24s ease-in-out infinite; }
+.anim-drift-right { animation: drift-right 27s ease-in-out infinite; }
+.anim-float-soft { animation: float-soft 21s ease-in-out infinite; }
+.anim-float-back { animation: float-back 23s ease-in-out infinite; }
+.anim-balloon-sway { animation: balloon-sway 5s ease-in-out infinite; }
+.anim-balloon-sway-alt { animation: balloon-sway-alt 6.5s ease-in-out infinite; }
+.anim-bird-left { animation: bird-glide 9s ease-in-out infinite; }
+.anim-bird-right { animation: bird-glide 12s ease-in-out infinite reverse; }
+.anim-title { animation: title-bob 6s ease-in-out infinite; }

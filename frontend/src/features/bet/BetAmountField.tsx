@@ -1,7 +1,7 @@
 // Поле произвольной ставки с быстрыми пресетами и проверкой баланса
 
+import { Plus } from 'lucide-react';
 import { BET_PRESETS } from '@/shared/config/default-config';
-import { Button } from '@/shared/ui/Button';
 import { cn } from '@/shared/lib/cn';
 
 interface BetAmountFieldProps {
@@ -10,6 +10,8 @@ interface BetAmountFieldProps {
   disabled?: boolean;
   onChange: (value: number) => void;
 }
+
+const STEP = 10;
 
 export function BetAmountField({
   value,
@@ -22,8 +24,13 @@ export function BetAmountField({
 
   return (
     <div>
-      <label className="block">
-        <span className="block text-xs text-muted">Сумма ставки, бонусов</span>
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors',
+          'glass-tile',
+          tooHigh && 'border-red-theme',
+        )}
+      >
         <input
           type="number"
           disabled={disabled}
@@ -32,38 +39,46 @@ export function BetAmountField({
           step={1}
           value={value === 0 ? '' : value}
           placeholder="Введите сумму"
+          aria-label="Сумма ставки"
           onChange={(event) => onChange(Math.floor(Number(event.target.value)) || 0)}
           className={cn(
-            'mt-1 w-full rounded-md border px-3 py-2 text-lg font-semibold tabular-nums',
-            'focus:outline-none',
-            tooHigh ? 'border-red-theme text-red-theme' : 'border-line focus:border-ink',
+            'no-spinner min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none',
+            'placeholder:font-normal placeholder:text-on-glass-dim',
+            tooHigh ? 'text-red-theme' : 'text-on-glass',
           )}
         />
-      </label>
-
-      <div className="mt-2 flex flex-wrap gap-2">
-        {BET_PRESETS.map((preset) => (
-          <Button
-            key={preset}
-            variant="outline"
-            disabled={disabled || preset > balance}
-            onClick={() => onChange(preset)}
-            className="px-3 py-1 text-xs"
-          >
-            {preset}
-          </Button>
-        ))}
-        <Button
-          variant="outline"
-          disabled={disabled || balance < 1}
-          onClick={() => onChange(balance)}
-          className="px-3 py-1 text-xs"
+        <button
+          type="button"
+          disabled={disabled || value + STEP > balance}
+          onClick={() => onChange(Math.min(value + STEP, balance))}
+          aria-label="Увеличить ставку"
+          className="glass-tile shrink-0 rounded-lg p-2 text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Весь баланс
-        </Button>
+          <Plus size={22} />
+        </button>
       </div>
 
-      {tooHigh && <p className="mt-2 text-xs text-red-theme">Не хватает бонусов</p>}
+      <div className="mt-3 flex gap-2">
+        {BET_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            disabled={disabled || preset > balance}
+            onClick={() => onChange(preset)}
+            className="glass-tile flex-1 rounded-lg px-1 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {preset}
+          </button>
+        ))}
+        <button
+          disabled={disabled || balance < 1}
+          onClick={() => onChange(balance)}
+          className="glass-tile shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Весь баланс
+        </button>
+      </div>
+
+      {tooHigh && <p className="mt-2 text-xs font-semibold text-red-theme">Не хватает бонусов</p>}
     </div>
   );
 }

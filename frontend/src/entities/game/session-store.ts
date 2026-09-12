@@ -22,7 +22,7 @@ export const useSessionStore = create<SessionState>()(
   persist(
     (set) => ({
       user: null,
-      theme: 'green',
+      theme: 'red',
       betCost: 0,
       boosterTier: 1,
       lastBet: null,
@@ -33,6 +33,6 @@ export const useSessionStore = create<SessionState>()(
       rememberBet: (cost, tier) => set({ lastBet: { cost, tier } }),
       markOnboardingSeen: () => set({ onboardingSeen: true }),
     }),
-    { name: 'balloon.session' },
+    { name: 'balloon.session', version: 2 },
   ),
 );

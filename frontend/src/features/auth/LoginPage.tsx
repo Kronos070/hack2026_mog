@@ -34,7 +34,7 @@ export function LoginPage() {
           : await api.register({ login, password, username: login, email });
       setUser(user);
       soundManager.play('select', 0.5);
-      navigate(user.role === 'admin' ? '/admin' : '/game');
+      navigate(user.role === 'admin' ? '/admin' : '/choose');
     } catch {
       toast.error(mode === 'login' ? 'Неверный логин или пароль' : 'Не удалось зарегистрироваться');
     } finally {
@@ -48,7 +48,7 @@ export function LoginPage() {
         ? await api.login({ login: role, password: '' })
         : await api.login({ login: 'admin', password: 'admin123' });
       setUser(user);
-      navigate(user.role === 'admin' ? '/admin' : '/game');
+      navigate(user.role === 'admin' ? '/admin' : '/choose');
     } catch {
       toast.error('Не удалось войти');
     }

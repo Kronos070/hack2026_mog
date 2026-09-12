@@ -1,13 +1,19 @@
 // Турнирная таблица: места, очки и призовой фонд с таймером до завершения
 
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api } from '@/shared/api/client';
 import { useCountdown } from '@/features/tournament/use-countdown';
-import { Link } from 'react-router-dom';
 import { Avatar } from '@/shared/ui/Avatar';
 import { cn } from '@/shared/lib/cn';
 
-const VISIBLE_PLACES = 8;
+const VISIBLE_PLACES = 10;
+
+const PLACE_COLORS: Readonly<Record<number, string>> = {
+  1: 'text-accent',
+  2: 'text-on-glass',
+  3: 'text-red-theme',
+};
 
 export function TournamentTable() {
   // Показывает текущий рейтинг турнира и время до его окончания
@@ -20,11 +26,7 @@ export function TournamentTable() {
   const remaining = useCountdown(data?.endsAt ?? null);
 
   if (isLoading || !data) {
-    return (
-      <div className="rounded-lg border-2 border-line p-5 text-base text-muted">
-        Загрузка турнира…
-      </div>
-    );
+    return <p className="py-3 text-center text-sm text-on-glass-dim">Загрузка турнира…</p>;
   }
 
   const visible = data.entries.slice(0, VISIBLE_PLACES);
@@ -32,25 +34,18 @@ export function TournamentTable() {
   const currentHidden = current && current.place > VISIBLE_PLACES;
 
   return (
-    <div className="overflow-hidden rounded-lg border-2 border-line">
-      <div className="flex items-center justify-between border-b-2 border-line bg-surface px-4 py-3">
-        <span className="text-base font-semibold">{data.title}</span>
-        <span className="tabular-nums text-sm text-muted">до конца {remaining}</span>
-      </div>
-
-      <ul className="divide-y divide-line">
+    <div>
+      <p className="mb-3 text-center text-xs text-on-glass-dim">до конца {remaining}</p>
+      <ul className="grid gap-2.5">
         {visible.map((entry) => (
-          <Row key={entry.playerId} entry={entry} isCurrent={entry.playerId === data.currentPlayerId} />
+          <Row
+            key={entry.playerId}
+            entry={entry}
+            isCurrent={entry.playerId === data.currentPlayerId}
+          />
         ))}
+        {currentHidden && current && <Row entry={current} isCurrent />}
       </ul>
-
-      {currentHidden && current && (
-        <div className="border-t-2 border-ink">
-          <ul>
-            <Row entry={current} isCurrent />
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
@@ -66,28 +61,21 @@ function Row({
     <li>
       <Link
         to={isCurrent ? '/profile' : `/profile/${entry.playerId}`}
-        className={cn(
-          'flex items-center gap-3 px-4 py-3 text-base transition-colors hover:bg-ink/5',
-          isCurrent && 'bg-ink/5 font-semibold',
-          entry.place <= 3 && !isCurrent && 'bg-gold/5',
-        )}
+        className="glass-tile flex items-center gap-2.5 rounded-xl px-3 py-3 text-base transition-all hover:brightness-125"
       >
-      <span
-        className={cn(
-          'w-7 shrink-0 tabular-nums',
-          entry.place <= 3 ? 'font-bold text-gold' : 'text-muted',
-        )}
-      >
-        {entry.place}
-      </span>
-      <Avatar name={entry.playerName} size="sm" />
-      <span className="min-w-0 flex-1 truncate">
-        {entry.playerName}
-        {isCurrent && <span className="ml-2 text-sm font-normal text-muted">вы</span>}
-      </span>
-      <span className="shrink-0 tabular-nums text-muted">{entry.points}</span>
-      {entry.prize > 0 && (
-          <span className="w-20 shrink-0 text-right tabular-nums text-sm text-green-theme">
+        <span
+          className={cn(
+            'w-4 shrink-0 font-bold tabular-nums',
+            PLACE_COLORS[entry.place] ?? 'text-on-glass-dim',
+          )}
+        >
+          {entry.place}
+        </span>
+        <Avatar name={entry.playerName} size="sm" />
+        <span className="min-w-0 flex-1 truncate text-on-glass">{entry.playerName}</span>
+        <span className="shrink-0 text-base font-bold tabular-nums text-accent">{entry.points}</span>
+        {entry.prize > 0 && (
+          <span className="shrink-0 text-base font-semibold tabular-nums text-pick">
             +{entry.prize}
           </span>
         )}

@@ -1,6 +1,6 @@
 # MOG Backend API & WebSocket Specification (Authoritative Reference)
 
-> **Статус документа:** Актуален · Версия: 1.2.0 · Среда: Quarkus 3.x / Java 21 Loom / PostgreSQL 16  
+> **Статус документа:** Актуален · Версия: 1.3.0 · Среда: Quarkus 3.x / Java 21 Loom / PostgreSQL 16  
 > **Целевая аудитория:** AI-агенты, фронтенд-разработчики, тестировщики и интеграторы.  
 > **Базовый HTTP URL:** `http://localhost:8080`  
 > **Базовый WebSocket URL:** `ws://localhost:8080`
@@ -9,7 +9,7 @@
 
 ## 1. Архитектурный контекст и общие правила
 
-1. **Server-Authoritative:** Все ключевые игровые решения (точка краха шара, множители, позиция и активация бустера, списание ставки, начисление выигрыша и турнирных очков) вычисляются и проверяются исключительно сервером. Клиент лишь визуализирует состояние.
+1. **Server-Authoritative:** Все ключевые игровые решения (точка краха шара, множители, позиция и активация бустера, списание ставки, начисление выигрыша, турнирных очков и мета-наград) вычисляются и проверяются исключительно сервером. Клиент лишь визуализирует состояние.
 2. **Формат данных:** Все HTTP REST запросы и ответы имеют заголовок `Content-Type: application/json`. Дата и время передаются в формате ISO-8601 UTC (например, `2026-09-12T10:15:30.123456Z`).
 3. **Аутентификация:** Используется **JWT Bearer Token** (`Authorization: Bearer <token>`) с временем жизни 24 часа. Для WebSocket токен передается в query-параметре: `/ws/game?token=<jwt_token>`.
 4. **Математическая модель полета:** Рост коэффициента подчиняется непрерывной экспоненциальной формуле:
@@ -17,8 +17,9 @@
    При $k = 0.06$ множитель $2.00\times$ достигается за $\approx 11.55$ секунд. Время краха:
    $$t_{crash} = \frac{\ln(M_{crash})}{k}$$
 5. **Real-time стриминг:**
-   - **WebSocket (60 FPS):** Сервер пушит тики множителя полета по WebSocket с частотой 60 кадров/сек (интервал $\approx 16$ мс) на легковесных виртуальных потоках.
+   - **WebSocket (60 FPS):** Сервер пушит тики множителя полета по WebSocket с частотой 60 кадров/сек (интервал $\approx 16$ мс) на легковесных виртуальных потоках, а также мгновенно передает `CASHOUT` и `CRASHED` с выпавшими фрагментами пазла (`reward`) и новыми достижениями (`unlockedAchievements`).
    - **Server-Sent Events (1 Гц):** Потоковая трансляция актуальной турнирной таблицы и лидерборда в реальном времени с периодичностью 1 раз в секунду вместо клиентского polling.
+6. **Мета-игра и удержание (ТЗ §1.5):** Автоматическая выдача деталей пазла по Pity Timer (+20% за пустой раунд) с защитой от дубликатов (Bad Luck Protection), динамический расчет 6 рангов по чистой прибыли и проверка 10 достижений с буквами для UI-бейджей.
 
 ---
 
@@ -31,12 +32,12 @@
 | `GET` | `/api/ping` | Нет | Проверка работоспособности бэкенда (Healthcheck) |
 | `POST` | `/api/auth/register` | Нет | Регистрация нового игрока (выдает токен + 1000 бонусов) |
 | `POST` | `/api/auth/login` | Нет | Аутентификация по username/email и паролю (выдает токен) |
-| `GET` | `/api/auth/me` | JWT | Получение профиля текущего авторизованного пользователя |
-| `GET` | `/api/users/me` | JWT | Получить собственный расширенный профиль |
+| `GET` | `/api/auth/me` | JWT | Получение профиля авторизованного пользователя (`UserProfileResponse`) |
+| `GET` | `/api/users/me` | JWT | Получить собственный расширенный профиль (`ProfileDto`: пазлы, ачивки, ранг, статистика) |
 | `PUT` | `/api/users/me` | JWT | Обновить данные профиля (username, email, имя, аватар) |
 | `PUT` | `/api/users/me/password`| JWT | Сменить пароль (требует текущий пароль) |
 | `DELETE`| `/api/users/me` | JWT | Удалить свой аккаунт |
-| `GET` | `/api/users/{id}` | Нет | Получить публичный профиль игрока по ID |
+| `GET` | `/api/users/{id}` | Нет | Получить публичный профиль игрока по ID (`ProfileDto` с мета-игрой) |
 | `GET` | `/api/users` | Нет | Пагинированный список игроков (`?page=0&size=20`) |
 | `POST` | `/api/users/me/top-up` | JWT | Быстрое пополнение бонусного баланса текущего игрока |
 | `POST` | `/api/users/{id}/top-up`| Нет | Быстрое пополнение баланса пользователя по ID |
@@ -168,8 +169,69 @@
 ### 3.3. Управление пользователями и профилем (`/api/users/*`)
 
 #### `GET /api/users/me`
+Получить собственный расширенный профиль игрока со всеми данными мета-игры (пазлы, динамический ранг, 10 достижений и статистика раундов). В точности соответствует `profileSchema` фронтенда.
 - **Headers:** `Authorization: Bearer <jwt_token>`
-- **Ответ `200 OK`:** Объект `UserProfileResponse`.
+- **Ответ `200 OK` (`ProfileDto`):**
+```json
+{
+  "user": {
+    "id": "1",
+    "name": "super_player",
+    "role": "user",
+    "balance": 1150,
+    "points": 350
+  },
+  "puzzle": [
+    "piece_1",
+    "piece_3",
+    "piece_5"
+  ],
+  "puzzleTotal": 9,
+  "roundsPlayed": 14,
+  "roundsWon": 8,
+  "bestMultiplier": 4.52,
+  "totalWagered": 1400,
+  "totalPayout": 2150,
+  "rank": {
+    "id": "amateur",
+    "title": "Любитель",
+    "minProfit": 500.0,
+    "nextTitle": "Воздухоплаватель",
+    "nextAt": 2000.0,
+    "profit": 750.0
+  },
+  "achievements": [
+    {
+      "id": "first_flight",
+      "title": "Первый полет",
+      "description": "Сыграть первый раунд в игре",
+      "letter": "П",
+      "unlockedAt": 1789200000000
+    },
+    {
+      "id": "lucky_start",
+      "title": "Удачный старт",
+      "description": "Выиграть свой первый раунд",
+      "letter": "У",
+      "unlockedAt": 1789200050000
+    },
+    {
+      "id": "high_flight_5x",
+      "title": "Высокий полет (x5+)",
+      "description": "Забрать выигрыш на множителе x5 или выше",
+      "letter": "В",
+      "unlockedAt": null
+    }
+  ]
+}
+```
+*Поля `ProfileDto`:*
+- `user`: объект игрока (`id`, `name`, `role`, `balance`, `points`).
+- `puzzle`: список строковых ID собранных фрагментов (например, `["piece_1", "piece_3"]`).
+- `puzzleTotal`: константа `9` (всего деталей в пазле).
+- `roundsPlayed`, `roundsWon`, `bestMultiplier`, `totalWagered`, `totalPayout`: агрегированная статистика по завершенным раундам игрока.
+- `rank`: объект текущего ранга игрока, рассчитанного по чистой прибыли ($profit = totalPayout - totalWagered$).
+- `achievements`: полный каталог из 10 достижений игры с отметкой `unlockedAt` (timestamp в ms или `null`, если заблокировано).
 
 #### `PUT /api/users/me`
 Обновление личных данных профиля.
@@ -205,8 +267,8 @@
 - **Ответ `204 No Content`**.
 
 #### `GET /api/users/{id}`
-Публичный профиль по ID.
-- **Ответ `200 OK`:** `UserProfileResponse`.
+Публичный расширенный профиль по ID игрока (включая мета-игру `ProfileDto`).
+- **Ответ `200 OK`:** Объект `ProfileDto`.
 - **Ошибки:** `404 Not Found`.
 
 #### `GET /api/users?page=0&size=20`
@@ -350,7 +412,23 @@
   "nextHouseEdge": 0.0425,
   "serverSeed": "a1b2c3d4e5f6...",
   "clientSeed": "8f3a9e2b1c4d...",
-  "nonce": 1726099200000
+  "nonce": 1726099200000,
+  "reward": {
+    "kind": "puzzle-piece",
+    "pieceId": "piece_3",
+    "label": "Фрагмент 3",
+    "collected": 3,
+    "total": 9
+  },
+  "unlockedAchievements": [
+    {
+      "id": "lucky_start",
+      "title": "Удачный старт",
+      "description": "Выиграть свой первый раунд",
+      "letter": "У",
+      "unlockedAt": 1726099200000
+    }
+  ]
 }
 ```
 
@@ -371,7 +449,15 @@
   "nextHouseEdge": 0.0300,
   "serverSeed": "a1b2c3d4e5f6...",
   "clientSeed": "8f3a9e2b1c4d...",
-  "nonce": 1726099200000
+  "nonce": 1726099200000,
+  "reward": {
+    "kind": "puzzle-piece",
+    "pieceId": "none",
+    "label": "Без фрагмента",
+    "collected": 2,
+    "total": 9
+  },
+  "unlockedAchievements": []
 }
 ```
 
@@ -748,7 +834,23 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
   "pointsEarned": 90,
   "levelsPassed": 4,
   "boosterActivated": true,
-  "message": "Cashout successful"
+  "message": "Cashout successful",
+  "reward": {
+    "kind": "puzzle-piece",
+    "pieceId": "piece_3",
+    "label": "Фрагмент 3",
+    "collected": 3,
+    "total": 9
+  },
+  "unlockedAchievements": [
+    {
+      "id": "lucky_start",
+      "title": "Удачный старт",
+      "description": "Выиграть свой первый раунд",
+      "letter": "У",
+      "unlockedAt": 1726099200000
+    }
+  ]
 }
 ```
 *Важно (по CASE.md):* Даже после получения `CASHOUT` шар продолжает лететь и стримить события `TICK` до момента точки краха! Выигрыш игрока зафиксирован и больше не меняется.
@@ -761,11 +863,20 @@ ws://localhost:8080/ws/game?token=eyJhbGciOiJSUzI1NiIs...
   "roundId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "crashMultiplier": 3.80,
   "winAmount": 0,
+  "newBalance": 900,
   "elapsedMs": 14200,
   "pointsEarned": 30,
   "levelsPassed": 3,
   "boosterActivated": false,
-  "message": "Balloon crashed!"
+  "message": "Balloon crashed!",
+  "reward": {
+    "kind": "puzzle-piece",
+    "pieceId": "none",
+    "label": "Без фрагмента",
+    "collected": 2,
+    "total": 9
+  },
+  "unlockedAchievements": []
 }
 ```
 После этого события клиент показывает финальный экран результатов (выигрыш или сгорание ставки) со всеми заработанными очками и пройденными уровнями.
@@ -897,13 +1008,72 @@ export function useTournamentStreams(baseUrl = 'http://localhost:8080') {
 - **2 место:** 60% от набранных очков участника (`prize = Math.round(points * 0.6)`).
 - **3 место:** 30% от набранных очков участника (`prize = Math.round(points * 0.3)`).
 - **4+ места:** призовые бонусы не начисляются (`prize = 0`).
-- **Период турнира:** суточный турнир с таймером окончания `endsAt`, указывающим на 23:59:59 MSK (`Europe/Moscow`) текущих суток.
+---
+
+## 7. Мета-игра: Коллекция пазлов, динамические ранги и система достижений (ТЗ §1.5)
+
+Модуль удержания (Retention & Gamification), реализованный в сервисе `MetaGameService` на базе миграции `V1.0.9`. Обеспечивает долгосрочную мотивацию игроков, наглядный прогресс в профиле и автоматическое поощрение за активность.
+
+### 7.1. Коллекция пазлов и алгоритм дропа (Bad Luck Protection & Pity Timer)
+- **Каталог пазла:** Всего **9 тематических фрагментов** (`piece_1` .. `piece_9`), общее количество `puzzleTotal = 9`.
+  - `piece_1`: «Фрагмент 1»
+  - `piece_2`: «Фрагмент 2»
+  - `piece_3`: «Фрагмент 3»
+  - `piece_4`: «Фрагмент 4»
+  - `piece_5`: «Фрагмент 5»
+  - `piece_6`: «Фрагмент 6»
+  - `piece_7`: «Фрагмент 7»
+  - `piece_8`: «Фрагмент 8»
+  - `piece_9`: «Фрагмент 9»
+- **Pity Timer (гарантия выпадения):**
+  - Базовый шанс выпадения фрагмента за раунд составляет **30%**.
+  - За каждый сыгранный раунд без выпадения счетчик `users.puzzle_pity` увеличивается на `+1`, добавляя **+20%** к вероятности дропа:
+    $$\text{DropChance} = \min(1.0, \; 0.30 + \text{pity} \times 0.20)$$
+  - При выпадении фрагмента счетчик pity сбрасывается в `0`.
+- **Bad Luck Protection (защита от дубликатов):**
+  - Сервер запрашивает список уже собранных игроком фрагментов в таблице `user_puzzle_pieces`.
+  - При срабатывании шанса дропа случайным образом выбирается **только недостающий** фрагмент:
+    $$\text{missingPieces} = \text{ALL\_PIECES} \setminus \text{collectedPieces}$$
+  - Дубликаты фрагментов математически исключены. Игрок гарантированно собирает полную коллекцию за разумное число раундов.
+  - Когда все 9 фрагментов собраны, в результате раунда возвращается `RewardDto("completed", "Коллекция собрана", 9, 9)`.
+
+### 7.2. Динамические ранги игрока по чистой прибыли
+Ранг пересчитывается динамически на основе совокупных финансовых показателей игрока по всем завершенным раундам:
+$$\text{Profit} = \text{totalPayout} - \text{totalWagered}$$
+
+Шкала 6 канонических рангов Столото:
+| Ранг ID | Название | Мин. прибыль ($minProfit$) | Следующий ранг | Порог ($nextAt$) |
+|---|---|:---:|---|:---:|
+| `novice` | **Новичок** | $0$ | Любитель | $500$ |
+| `amateur` | **Любитель** | $500$ | Воздухоплаватель | $2\,000$ |
+| `aeronaut` | **Воздухоплаватель** | $2\,000$ | Капитан | $5\,000$ |
+| `captain` | **Капитан** | $5\,000$ | Мастер ветра | $15\,000$ |
+| `wind_master` | **Мастер ветра** | $15\,000$ | Легенда небес | $50\,000$ |
+| `sky_legend` | **Легенда небес** | $50\,000$ | — *(максимальный)* | `null` |
+
+*Примечание:* При отрицательной прибыли ($profit < 0$) игрок находится на ранге `novice` («Новичок»), а поле `profit` точно отражает текущий финансовый результат (например, `-250`).
+
+### 7.3. Каталог 10 достижений игры
+Каждое достижение содержит уникальную букву `letter` для визуального рендеринга круглого бейджа в профиле и всплывающих тостах `AchievementToast`:
+
+| ID достижения | Название | Буква | Описание | Критерий разблокировки |
+|---|---|:---:|---|---|
+| `first_flight` | **Первый полет** | **П** | Сыграть первый раунд в игре | `roundsPlayed >= 1` |
+| `lucky_start` | **Удачный старт** | **У** | Выиграть свой первый раунд | `roundsWon >= 1` или текущий кэшаут |
+| `high_flight_5x` | **Высокий полет (x5+)** | **В** | Забрать выигрыш на множителе x5 или выше | `bestMultiplier >= 5.0` |
+| `stratosphere_10x` | **Стратосфера (x10+)** | **С** | Забрать выигрыш на множителе x10 или выше | `bestMultiplier >= 10.0` |
+| `risky_captain` | **Рисковый капитан** | **Р** | Забрать выигрыш на множителе x20 или выше | `bestMultiplier >= 20.0` |
+| `win_streak_3` | **Серия побед** | **П** | Одержать победу в 3 раундах подряд | 3 подряд раунда с `isWin = true` в истории |
+| `booster_master` | **Мастер бустеров** | **М** | Активировать бустер во время полета | `boosterActivated == true` в раунде |
+| `puzzle_collector` | **Коллекционер пазлов** | **К** | Собрать все 9 фрагментов пазла | `collectedPieces >= 9` |
+| `high_roller` | **Щедрый игрок** | **Щ** | Сделать ставку от 250 бонусов за раунд | `maxBet >= 250` или текущая ставка $\ge 250$ |
+| `sky_legend` | **Легенда небес** | **Л** | Достичь наивысшего ранга «Легенда небес» | `profit >= 50000` |
 
 ---
 
-## 7. Математическая модель Provably Fair и House Edge
+## 8. Математическая модель Provably Fair и House Edge
 
-### 6.1. Provably Fair генерация точки краха (HMAC-SHA256)
+### 8.1. Provably Fair генерация точки краха (HMAC-SHA256)
 Сервер рассчитывает коэффициент краха до старта раунда:
 1. `h = first_52_bits( HMAC_SHA256( server_seed, client_seed + ":" + nonce ) )`
 2. $e = 2^{52} = 4{,}503{,}599{,}627{,}370{,}496$
@@ -912,7 +1082,7 @@ export function useTournamentStreams(baseUrl = 'http://localhost:8080') {
 4. Итоговый множитель округляется вниз до 2 знаков:
    $$M_{crash} = \max\left(1.00, \; \frac{\lfloor M_{raw} \cdot 100 \rfloor}{100}\right)$$
 
-### 6.2. Динамический расчет House Edge игрока
+### 8.2. Динамический расчет House Edge игрока
 Позволяет балансировать математическое ожидание в зависимости от результатов предыдущих раундов:
 - $HE_{base} = 0.04$, $HE_{min} = 0.005$, $HE_{max} = 0.33$.
 - Вес выигрыша: $W(n) = \max(1, \; k_{cashout} - 1)$.
@@ -926,7 +1096,7 @@ export function useTournamentStreams(baseUrl = 'http://localhost:8080') {
 
 ---
 
-## 8. TypeScript контракты (Интерфейсы для фронтенда)
+## 9. TypeScript контракты (Интерфейсы для фронтенда)
 
 ```typescript
 // ==================== REST Contracts ====================
@@ -1001,6 +1171,8 @@ export interface GameRoundCashoutResult {
   serverSeed: string;
   clientSeed: string;
   nonce: number;
+  reward?: RewardDto | null;
+  unlockedAchievements?: AchievementDto[];
 }
 
 export interface GameRoundStateResult {
@@ -1108,12 +1280,62 @@ export interface WsGameMessage {
   pointsEarned?: number | null;
   levelsPassed?: number | null;
   boosterActivated?: boolean | null;
+  reward?: RewardDto | null;
+  unlockedAchievements?: AchievementDto[];
+}
+
+// ==================== Meta-Game & Rewards Contracts ====================
+
+export interface RewardDto {
+  kind: "puzzle-piece";
+  pieceId: string;
+  label: string;
+  collected: number;
+  total: number;
+}
+
+export interface RankDto {
+  id: string;
+  title: string;
+  minProfit: number;
+  nextTitle: string | null;
+  nextAt: number | null;
+  profit: number;
+}
+
+export interface AchievementDto {
+  id: string;
+  title: string;
+  description: string;
+  letter: string;
+  unlockedAt: number | null; // epoch ms or null if locked
+}
+
+export interface ProfileUserDto {
+  id: string;
+  name: string;
+  role: "user" | "admin";
+  balance: number;
+  points: number;
+}
+
+export interface ProfileDto {
+  user: ProfileUserDto;
+  puzzle: string[];
+  puzzleTotal: number; // 9
+  roundsPlayed: number;
+  roundsWon: number;
+  bestMultiplier: number;
+  totalWagered: number;
+  totalPayout: number;
+  rank: RankDto;
+  achievements: AchievementDto[];
 }
 ```
 
 ---
 
-## 9. Клиентская проверка Provably Fair (TypeScript)
+## 10. Клиентская проверка Provably Fair (TypeScript)
 
 Для проверки честности любого сыгранного раунда клиент может локально выполнить вычисление:
 
@@ -1155,7 +1377,7 @@ export function verifyRound(
 
 ---
 
-## 10. Формат сообщений об ошибках (`ErrorResponse`)
+## 11. Формат сообщений об ошибках (`ErrorResponse`)
 
 В случае ошибок REST API всегда возвращает стандартизированный JSON:
 

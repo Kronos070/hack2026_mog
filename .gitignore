@@ -1,1 +1,8 @@
+chto mb budet
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.*.example
 chto mb budet.playwright-mcp/

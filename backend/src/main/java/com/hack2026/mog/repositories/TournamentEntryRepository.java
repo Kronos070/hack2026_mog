@@ -36,4 +36,13 @@ public class TournamentEntryRepository implements PanacheRepository<TournamentEn
         .setParameter("points", (long) pointsEarned)
         .executeUpdate();
     }
+
+    @Transactional
+    public int resetAllScores() {
+        int updated = getEntityManager().createNativeQuery(
+                "UPDATE tournament_entries SET score = 0, updated_at = CURRENT_TIMESTAMP"
+        ).executeUpdate();
+        getEntityManager().clear();
+        return updated;
+    }
 }

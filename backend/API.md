@@ -52,6 +52,8 @@
 | `POST` | `/api/admin/config/reset` | ADMIN | Сброс конфигурации к эталонным дефолтным значениям |
 | `GET` | `/api/tournament` | Опц. | Полная турнирная таблица, призовые места топ-3 и таймер endsAt |
 | `GET` | `/api/tournament/leaderboard` | Нет | Компактный рейтинг участников лидерборда (`?limit=50`) |
+| `POST`| `/api/tournament/settle` | Нет | Финализация турнира, выплата призов топ-3 и сброс очков (`?force=true`) |
+| `GET` | `/api/tournament/history` | Опц. | Архив призеров завершенных турниров (`?my=true&limit=20`) |
 
 ### 2.2. WebSocket
 
@@ -589,6 +591,84 @@
 
 ---
 
+#### `POST /api/tournament/settle?force=false`
+Финализация турнира и начисление наград победителям.
+- **Логика работы:**
+  1. Проверяет, завершился ли период турнира (`now >= endsAt`). Если турнир еще активен, без флага `force=true` возвращается статус `SKIPPED`.
+  2. Проверяет идемпотентность: исключает повторную выплату за один и тот же период.
+  3. Выбирает топ-3 участников:
+     - 1 место: 100% от набранных очков (`prize = score`);
+     - 2 место: 60% от набранных очков (`prize = round(score * 0.6)`);
+     - 3 место: 30% от набранных очков (`prize = round(score * 0.3)`).
+  4. Начисляет призовые бонусы на баланс игроков (`User.bonusBalance += prize`).
+  5. Сохраняет записи в аудит-таблицу `tournament_history`.
+  6. Сбрасывает очки в таблице `tournament_entries` (`score = 0`) для старта нового суточного турнира.
+- **Автоматический запуск:** Метод также вызывается автоматически через **Quarkus Scheduler** ровно в полночь `00:00:00 MSK` (`@Scheduled(cron = "0 0 0 * * ?")`), а также проверяется каждую минуту на случай перезапуска сервера.
+- **Query-параметры:**
+  - `force` (boolean, опционально, по умолчанию `false`): принудительное завершение турнира до наступления 23:59:59 MSK (для ручного тестирования и демонстраций).
+- **Ответ `200 OK` (`TournamentSettlementResultDto`):**
+```json
+{
+  "status": "SUCCESS",
+  "tournamentTitle": "Гран-при Воздухоплавателей Столото",
+  "settledAt": 1789207734656,
+  "rewardedPlayersCount": 3,
+  "totalPrizesAwarded": 5907,
+  "winners": [
+    {
+      "place": 1,
+      "playerId": "7",
+      "playerName": "alex_pilot",
+      "score": 3450,
+      "prizeAwarded": 3450,
+      "awardedAt": "2026-09-12T10:08:54.663907Z"
+    },
+    {
+      "place": 2,
+      "playerId": "8",
+      "playerName": "sky_queen",
+      "score": 2890,
+      "prizeAwarded": 1734,
+      "awardedAt": "2026-09-12T10:08:54.681504Z"
+    },
+    {
+      "place": 3,
+      "playerId": "9",
+      "playerName": "wind_master",
+      "score": 2410,
+      "prizeAwarded": 723,
+      "awardedAt": "2026-09-12T10:08:54.684889Z"
+    }
+  ],
+  "message": "Турнир успешно финализирован! Призы зачислены на баланс победителей."
+}
+```
+
+---
+
+#### `GET /api/tournament/history?my=false&limit=20`
+Получение архива завершенных турниров и начисленных призов.
+- **Query-параметры:**
+  - `my` (boolean, опционально, по умолчанию `false`):
+    - `false` — возвращает глобальную историю призеров всех турниров;
+    - `true` — возвращает только историю наград текущего авторизованного игрока (требуется `Authorization: Bearer <jwt>`).
+  - `limit` (int, опционально, по умолчанию `20`).
+- **Ответ `200 OK` (`List<TournamentHistoryItemDto>`):**
+```json
+[
+  {
+    "place": 1,
+    "playerId": "7",
+    "playerName": "alex_pilot",
+    "score": 3450,
+    "prizeAwarded": 3450,
+    "awardedAt": "2026-09-12T10:08:54.663907Z"
+  }
+]
+```
+
+---
+
 ## 4. Спецификация WebSocket API (`/ws/game`)
 
 WebSocket обеспечивает полнодуплексный высокоскоростной стриминг тиков множителя в реальном времени с поддержкой до 60 кадров в секунду.
@@ -980,6 +1060,25 @@ export interface TournamentResponseDto {
   endsAt: number; // epoch ms (23:59:59 MSK)
   entries: TournamentTableEntryDto[];
   currentPlayerId: string | null;
+}
+
+export interface TournamentHistoryItemDto {
+  place: number;
+  playerId: string;
+  playerName: string;
+  score: number;
+  prizeAwarded: number;
+  awardedAt: string;
+}
+
+export interface TournamentSettlementResultDto {
+  status: "SUCCESS" | "SKIPPED" | "ALREADY_SETTLED";
+  tournamentTitle: string;
+  settledAt: number;
+  rewardedPlayersCount: number;
+  totalPrizesAwarded: number;
+  winners: TournamentHistoryItemDto[];
+  message: string;
 }
 
 // ==================== WebSocket Contracts ====================

@@ -62,6 +62,12 @@
             <artifactId>quarkus-flyway</artifactId>
         </dependency>
 
+        <!-- Scheduler (Cron and Periodic Background Jobs) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+        </dependency>
+
         <!-- WebSockets Next (Modern Declarative Real-Time) -->
         <dependency>
             <groupId>io.quarkus</groupId>

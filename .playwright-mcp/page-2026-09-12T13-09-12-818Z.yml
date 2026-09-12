@@ -1,0 +1,136 @@
+- generic [ref=f30e2]:
+  - generic [ref=f30e3]:
+    - banner [ref=f30e4]:
+      - generic [ref=f30e5]:
+        - button [ref=f30e6]:
+          - img "Воздушный шар" [ref=f30e7]
+          - img "Столото" [ref=f30e8]
+        - navigation [ref=f30e9]:
+          - button "Профиль" [ref=f30e10]
+          - button "Активы" [ref=f30e11]
+          - button "Правила" [ref=f30e12]
+          - button "Рейтинг" [ref=f30e13]
+          - button "Выйти" [ref=f30e14]
+          - button "Выключить звук" [ref=f30e15]
+    - main [ref=f30e20]:
+      - generic [ref=f30e21]:
+        - complementary [ref=f30e22]:
+          - generic [ref=f30e23]:
+            - heading "История игр" [level=2] [ref=f30e25]
+            - list [ref=f30e27]:
+              - listitem [ref=f30e28]:
+                - generic [ref=f30e29]: Тестовый игрок
+                - generic [ref=f30e30]: x1.31
+                - generic [ref=f30e31]: −250
+          - generic [ref=f30e32]:
+            - heading "Турнирная таблица" [level=2] [ref=f30e34]
+            - generic [ref=f30e36]:
+              - paragraph [ref=f30e37]: до конца 4:50:47
+              - list [ref=f30e38]:
+                - listitem [ref=f30e39]:
+                  - link "1 Алина 320 +5000" [ref=f30e40] [cursor=pointer]:
+                    - /url: /profile/bot-1
+                    - generic [ref=f30e41]: "1"
+                    - generic [aria-hidden] [ref=f30e42]: А
+                    - generic [ref=f30e43]: Алина
+                    - generic [ref=f30e44]: "320"
+                    - generic [ref=f30e45]: "+5000"
+                - listitem [ref=f30e46]:
+                  - link "2 Марк 285 +3000" [ref=f30e47] [cursor=pointer]:
+                    - /url: /profile/bot-2
+                    - generic [ref=f30e48]: "2"
+                    - generic [aria-hidden] [ref=f30e49]: М
+                    - generic [ref=f30e50]: Марк
+                    - generic [ref=f30e51]: "285"
+                    - generic [ref=f30e52]: "+3000"
+                - listitem [ref=f30e53]:
+                  - link "3 Соня 240 +1500" [ref=f30e54] [cursor=pointer]:
+                    - /url: /profile/bot-3
+                    - generic [ref=f30e55]: "3"
+                    - generic [aria-hidden] [ref=f30e56]: С
+                    - generic [ref=f30e57]: Соня
+                    - generic [ref=f30e58]: "240"
+                    - generic [ref=f30e59]: "+1500"
+                - listitem [ref=f30e60]:
+                  - link "4 Тимур 190 +800" [ref=f30e61] [cursor=pointer]:
+                    - /url: /profile/bot-4
+                    - generic [ref=f30e62]: "4"
+                    - generic [aria-hidden] [ref=f30e63]: Т
+                    - generic [ref=f30e64]: Тимур
+                    - generic [ref=f30e65]: "190"
+                    - generic [ref=f30e66]: "+800"
+                - listitem [ref=f30e67]:
+                  - link "5 Вера 145 +500" [ref=f30e68] [cursor=pointer]:
+                    - /url: /profile/bot-5
+                    - generic [ref=f30e69]: "5"
+                    - generic [aria-hidden] [ref=f30e70]: В
+                    - generic [ref=f30e71]: Вера
+                    - generic [ref=f30e72]: "145"
+                    - generic [ref=f30e73]: "+500"
+                - listitem [ref=f30e74]:
+                  - link "6 Тестовый игрок 10 +300" [ref=f30e75] [cursor=pointer]:
+                    - /url: /profile
+                    - generic [ref=f30e76]: "6"
+                    - generic [aria-hidden] [ref=f30e77]: Т
+                    - generic [ref=f30e78]: Тестовый игрок
+                    - generic [ref=f30e79]: "10"
+                    - generic [ref=f30e80]: "+300"
+        - generic [ref=f30e82]:
+          - generic:
+            - generic: x 1.21
+            - generic: x 1.47
+            - generic: x 1.78
+            - generic: x 2.15
+            - generic: x 2.61
+            - generic: x 3.16
+            - generic: x 3.83
+            - generic: x 4.64
+            - generic: x 5.62
+            - generic: x 6.81
+            - generic: x 8.25
+            - generic: x 10.00
+        - complementary [ref=f30e85]:
+          - generic [ref=f30e86]:
+            - generic [ref=f30e87]:
+              - generic [ref=f30e88]:
+                - heading "Бустер" [level=2] [ref=f30e89]
+                - paragraph [ref=f30e90]: Выберите фрагмент пазла
+              - generic [ref=f30e92]:
+                - button "x1 (без усил.)" [pressed] [ref=f30e93]:
+                  - generic [ref=f30e94]:
+                    - text: x1
+                    - generic [ref=f30e95]: (без усил.)
+                - button "x2 (тир 2)" [ref=f30e96]:
+                  - generic [ref=f30e97]:
+                    - text: x2
+                    - generic [ref=f30e98]: (тир 2)
+                - button "x3 (тир 3)" [ref=f30e99]:
+                  - generic [ref=f30e100]:
+                    - text: x3
+                    - generic [ref=f30e101]: (тир 3)
+                - button "x4 (тир 4)" [ref=f30e102]:
+                  - generic [ref=f30e103]:
+                    - text: x4
+                    - generic [ref=f30e104]: (тир 4)
+            - generic [ref=f30e105]:
+              - generic [ref=f30e106]:
+                - heading "Ставка" [level=2] [ref=f30e107]
+                - paragraph [ref=f30e108]: Сумма ставок, бонусов
+              - generic [ref=f30e110]:
+                - generic [ref=f30e111]:
+                  - spinbutton "Сумма ставки" [ref=f30e112]: "250"
+                  - button "Увеличить ставку" [ref=f30e113]
+                - generic [ref=f30e115]:
+                  - button "10" [ref=f30e116]
+                  - button "25" [ref=f30e117]
+                  - button "50" [ref=f30e118]
+                  - button "100" [ref=f30e119]
+                  - button "250" [ref=f30e120]
+                  - button "Весь баланс" [ref=f30e121]
+          - generic [ref=f30e122]:
+            - generic [ref=f30e123]:
+              - button "Повторить ставку" [ref=f30e124]
+              - button "Экспресс-ставка" [ref=f30e125]
+            - button "Начать" [ref=f30e126]
+      - generic "Тестовый игрок · ставка 250" [ref=f30e130]: x1.31
+  - region "Notifications alt+T"

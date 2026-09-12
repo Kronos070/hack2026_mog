@@ -2,11 +2,13 @@
 
 import type { RoundStart, Theme } from '@/shared/api/contract';
 import type { FlightSnapshot } from '@/features/flight/use-flight-engine';
-import { SkyLayer } from '@/features/flight/sky-layer';
-import { GroundLayer } from '@/features/flight/ground-layer';
 import { readScenePalette, type ScenePalette } from '@/features/flight/scene-palette';
+import { getBalloonSprite } from '@/features/flight/balloon-sprites';
 
 const BALLOON_BOTTOM = 104;
+const BALLOON_HEIGHT = 96;
+const BOOM_DURATION_MS = 700;
+const LADDER_WIDTH = 96;
 
 export interface SceneSetup {
   round: RoundStart | null;
@@ -15,8 +17,6 @@ export interface SceneSetup {
 }
 
 export class SceneRenderer {
-  private readonly sky = new SkyLayer();
-  private readonly ground = new GroundLayer();
   private palette: ScenePalette = readScenePalette();
   private particles: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   private width = 0;
@@ -27,12 +27,14 @@ export class SceneRenderer {
   private readonly round: RoundStart | null;
   private readonly levels: readonly number[];
   private readonly accent: string;
+  private readonly theme: Theme;
 
   constructor(ctx: CanvasRenderingContext2D, scene: SceneSetup) {
     this.ctx = ctx;
     this.round = scene.round;
     this.levels = scene.round?.levelMultipliers ?? scene.levels;
     this.accent = scene.theme === 'red' ? '#dc2626' : '#16a34a';
+    this.theme = scene.theme;
   }
 
   refreshPalette(): void {
@@ -48,12 +50,6 @@ export class SceneRenderer {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);
 
-    this.ctx.fillStyle = this.palette.sky;
-    this.ctx.fillRect(0, 0, width, height);
-    this.sky.update(deltaMs, width, height);
-    this.sky.draw(this.ctx, this.palette);
-    this.ground.draw(this.ctx, width, height, this.palette);
-
     this.drawLevels(snapshot);
 
     if (!this.round || !snapshot) {
@@ -67,6 +63,7 @@ export class SceneRenderer {
         this.explodedAt = performance.now();
         this.spawnParticles(snapshot.progress);
       }
+      this.drawBoom(snapshot.progress);
       this.drawParticles(deltaMs);
     } else {
       this.drawBalloon(snapshot);
@@ -78,22 +75,16 @@ export class SceneRenderer {
     const count = levels.length;
     if (count === 0) return;
 
-    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
-    ctx.textBaseline = 'middle';
-
     for (let index = 0; index < count; index += 1) {
       const y = height - ((index + 1) / (count + 1)) * height;
       const passed = (snapshot?.levelsPassed ?? 0) > index;
 
-      ctx.strokeStyle = passed ? this.palette.linePassed : this.palette.line;
-      ctx.lineWidth = passed ? 1.5 : 1;
+      ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = passed ? 2 : 1;
       ctx.beginPath();
-      ctx.moveTo(48, y);
-      ctx.lineTo(width - 16, y);
+      ctx.moveTo(LADDER_WIDTH, y);
+      ctx.lineTo(width - 12, y);
       ctx.stroke();
-
-      ctx.fillStyle = passed ? this.palette.linePassed : this.palette.label;
-      ctx.fillText(`x${levels[index]?.toFixed(2) ?? '-'}`, 6, y);
 
       if (this.round?.boosterLevel === index + 1) {
         this.drawBoosterMarker(y, snapshot?.boosterActivated ?? false);
@@ -127,27 +118,22 @@ export class SceneRenderer {
     ctx.save();
     ctx.translate(width / 2 + sway, y);
 
-    ctx.strokeStyle = this.palette.label;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(-8, 26);
-    ctx.lineTo(-5, 40);
-    ctx.moveTo(8, 26);
-    ctx.lineTo(5, 40);
-    ctx.stroke();
+    const sprite = getBalloonSprite(this.theme, 'default');
+    if (sprite) {
+      const height = BALLOON_HEIGHT;
+      const spriteWidth = (sprite.naturalWidth / sprite.naturalHeight) * height;
+      ctx.drawImage(sprite, -spriteWidth / 2, -height / 2, spriteWidth, height);
+      ctx.restore();
+      return;
+    }
 
     ctx.fillStyle = accent;
     ctx.beginPath();
     ctx.ellipse(0, 0, 22, 28, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(-7, -8, 6, 11, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-
     ctx.fillStyle = this.palette.trunk;
-    ctx.fillRect(-8, 40, 16, 12);
+    ctx.fillRect(-8, 30, 16, 12);
 
     ctx.restore();
   }
@@ -162,6 +148,25 @@ export class SceneRenderer {
       vy: (Math.random() - 0.5) * 320,
       life: 1,
     }));
+  }
+
+  private drawBoom(progress: number): void {
+    const sprite = getBalloonSprite(this.theme, 'boom');
+    if (!sprite || this.explodedAt === null) return;
+
+    const elapsed = performance.now() - this.explodedAt;
+    if (elapsed > BOOM_DURATION_MS) return;
+
+    const { ctx, width, height } = this;
+    const scale = 1 + (elapsed / BOOM_DURATION_MS) * 0.4;
+    const spriteHeight = BALLOON_HEIGHT * scale;
+    const spriteWidth = (sprite.naturalWidth / sprite.naturalHeight) * spriteHeight;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - elapsed / BOOM_DURATION_MS);
+    ctx.translate(width / 2, height - progress * height - 26);
+    ctx.drawImage(sprite, -spriteWidth / 2, -spriteHeight / 2, spriteWidth, spriteHeight);
+    ctx.restore();
   }
 
   private drawParticles(deltaMs: number): void {

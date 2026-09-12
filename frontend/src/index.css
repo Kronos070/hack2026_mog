@@ -117,3 +117,109 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Токены игрового дизайна: стеклянные панели поверх неба */
+@theme {
+  --color-glass: var(--c-glass);
+  --color-glass-strong: var(--c-glass-strong);
+  --color-glass-line: var(--c-glass-line);
+  --color-sky-deep: var(--c-sky-deep);
+  --color-accent: var(--c-accent);
+  --color-accent-dark: var(--c-accent-dark);
+  --color-pick: var(--c-pick);
+  --color-pick-dark: var(--c-pick-dark);
+  --color-slate-btn: var(--c-slate-btn);
+  --color-on-glass: var(--c-on-glass);
+  --color-on-glass-dim: var(--c-on-glass-dim);
+}
+
+:root {
+  --c-glass: rgb(74 104 140 / 0.34);
+  --c-glass-strong: rgb(86 116 150 / 0.40);
+  --c-glass-line: rgb(203 210 218 / 0.85);
+  --c-sky-deep: #0d2a4a;
+  --c-accent: #f5b324;
+  --c-accent-dark: #d79323;
+  --c-pick: #6ec81e;
+  --c-pick-dark: #4e9b12;
+  --c-slate-btn: #1b2233;
+  --c-on-glass: #ffffff;
+  --c-on-glass-dim: rgb(220 236 255 / 0.72);
+}
+
+@layer components {
+  .glass-edge {
+    position: relative;
+  }
+
+  .glass-panel {
+    position: relative;
+    background: var(--color-glass);
+    border: none;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  .glass-panel::before,
+  .glass-edge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      165deg,
+      rgb(226 236 245 / 0.95),
+      rgb(151 181 208 / 0.75) 22%,
+      rgb(106 149 183 / 0.45) 55%,
+      rgb(92 130 165 / 0.3)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .glass-tile {
+    background: var(--color-glass-strong);
+    border: 1px solid rgb(203 210 218 / 0.8);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22);
+  }
+
+  .level-mark {
+    text-shadow: 0 2px 5px rgb(4 20 40 / 0.85);
+    transition: color 0.25s ease;
+  }
+
+  .level-mark.is-passed {
+    color: var(--color-accent);
+  }
+
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel-title {
+    color: var(--color-on-glass);
+    text-shadow: 0 2px 6px rgb(4 20 40 / 0.6);
+  }
+}

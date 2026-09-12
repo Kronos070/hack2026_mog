@@ -1,4 +1,5 @@
-// Выбор тира бустера: множитель применяется при достижении его уровня
+// Выбор тира бустера: фрагмент пазла, множитель которого применяется на его уровне
+
 import type { BoosterTier } from '@/shared/api/contract';
 import { cn } from '@/shared/lib/cn';
 
@@ -19,23 +20,34 @@ export function BoosterPicker({
 }: BoosterPickerProps) {
   // Переключает множитель бустера для следующего раунда
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
+    <div className="grid grid-cols-4 gap-2.5">
       {TIERS.map((tier) => {
         const multiplier = multipliers[tier - 1] ?? 1;
+        const active = value === tier;
         return (
           <button
             key={tier}
             disabled={disabled}
             onClick={() => onChange(tier)}
+            aria-pressed={active}
             className={cn(
-              'rounded-lg border p-3 text-left transition-all disabled:cursor-not-allowed',
-              value === tier ? 'border-ink shadow-sm' : 'border-line hover:border-muted',
+              'flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 transition-all disabled:cursor-not-allowed',
+              active
+                ? 'bg-linear-to-b from-pick to-pick-dark shadow-[0_4px_16px_rgb(60_130_10/0.5)]'
+                : 'glass-tile hover:brightness-125',
             )}
           >
-            <p className="text-base font-bold">x{multiplier}</p>
-            <p className="mt-0.5 text-xs text-muted">
-              {multiplier === 1 ? 'Без усиления' : `Тир ${tier}`}
-            </p>
+            <img
+              src={`/images/boosters/tier-${tier}.png`}
+              alt=""
+              className="h-10 w-auto drop-shadow-[0_2px_4px_rgb(4_20_40/0.5)]"
+            />
+            <span className="text-center text-[11px] font-semibold leading-tight text-on-glass">
+              x{multiplier}
+              <span className="block font-normal text-on-glass-dim">
+                {multiplier === 1 ? '(без усил.)' : `(тир ${tier})`}
+              </span>
+            </span>
           </button>
         );
       })}

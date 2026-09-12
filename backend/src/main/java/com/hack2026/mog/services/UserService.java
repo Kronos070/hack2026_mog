@@ -112,4 +112,16 @@ public class UserService {
             .orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
         userRepository.delete(user);
     }
+
+    @Transactional
+    public com.hack2026.mog.dto.TopUpBalanceResponse topUpBalance(Long id, Long amount) {
+        User user = userRepository.findByIdOptional(id)
+            .orElseThrow(() -> new NotFoundException("Пользователь с id " + id + " не найден"));
+
+        long add = (amount != null && amount > 0) ? amount : 1000L;
+        long current = user.getBonusBalance() != null ? user.getBonusBalance() : 0L;
+        user.setBonusBalance(current + add);
+
+        return new com.hack2026.mog.dto.TopUpBalanceResponse(user.getId(), user.getUsername(), add, user.getBonusBalance());
+    }
 }

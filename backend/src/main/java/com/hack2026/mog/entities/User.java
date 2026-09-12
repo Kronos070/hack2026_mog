@@ -42,6 +42,15 @@ public class User {
     @Column(nullable = false, length = 32)
     private String role = "USER";
 
+    @Column(name = "current_house_edge", nullable = false)
+    private Double currentHouseEdge = 0.04;
+
+    @Column(name = "last_bet_amount")
+    private Long lastBetAmount;
+
+    @Column(name = "points", nullable = false)
+    private Long points = 0L;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -55,7 +64,9 @@ public class User {
         this.email = email;
         this.passwordHash = passwordHash;
         this.bonusBalance = 1000L;
+        this.points = 0L;
         this.role = "USER";
+        this.currentHouseEdge = 0.04;
     }
 
     @PrePersist
@@ -70,8 +81,14 @@ public class User {
         if (bonusBalance == null) {
             bonusBalance = 1000L;
         }
+        if (points == null) {
+            points = 0L;
+        }
         if (role == null) {
             role = "USER";
+        }
+        if (currentHouseEdge == null) {
+            currentHouseEdge = 0.04;
         }
     }
 
@@ -166,5 +183,29 @@ public class User {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getCurrentHouseEdge() {
+        return currentHouseEdge != null ? currentHouseEdge : 0.04;
+    }
+
+    public void setCurrentHouseEdge(Double currentHouseEdge) {
+        this.currentHouseEdge = currentHouseEdge;
+    }
+
+    public Long getLastBetAmount() {
+        return lastBetAmount;
+    }
+
+    public void setLastBetAmount(Long lastBetAmount) {
+        this.lastBetAmount = lastBetAmount;
+    }
+
+    public Long getPoints() {
+        return points != null ? points : 0L;
+    }
+
+    public void setPoints(Long points) {
+        this.points = points != null ? points : 0L;
     }
 }

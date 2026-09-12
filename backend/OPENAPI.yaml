@@ -17,6 +17,13 @@ components:
       bearerFormat: JWT
       description: Authentication
   schemas:
+    CashoutRequest:
+      type: object
+      required:
+      - roundId
+      properties:
+        roundId:
+          $ref: "#/components/schemas/UUID"
     ChangePasswordRequest:
       type: object
       required:
@@ -106,6 +113,61 @@ components:
         avatarUrl:
           type: string
           maxLength: 512
+    StartRoundRequest:
+      type: object
+      properties:
+        betAmount:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 100
+        cost:
+          type: integer
+          format: int64
+          description: Алиас для betAmount (формат фронтенда)
+          example: 100
+        theme:
+          type: string
+          enum: [green, red]
+          default: green
+        boosterMultiplier:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 2
+        boosterTier:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4
+          description: Алиас для boosterMultiplier (формат фронтенда)
+          example: 2
+    TopUpBalanceRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: Сумма для начисления (по умолчанию 1000)
+          example: 1000
+    TopUpBalanceResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        addedAmount:
+          type: integer
+          format: int64
+        newBalance:
+          type: integer
+          format: int64
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
     UpdateProfileRequest:
       type: object
       properties:
@@ -138,6 +200,9 @@ components:
         bonusBalance:
           type: integer
           format: int64
+        points:
+          type: integer
+          format: int64
         firstName:
           type: string
         lastName:
@@ -150,9 +215,95 @@ components:
           $ref: "#/components/schemas/Instant"
         updatedAt:
           $ref: "#/components/schemas/Instant"
+    LootProbabilitiesDto:
+      type: object
+      required:
+      - green
+      - red
+      properties:
+        green:
+          type: array
+          items:
+            type: number
+            format: double
+        red:
+          type: array
+          items:
+            type: number
+            format: double
+    GameConfigDto:
+      type: object
+      required:
+      - gameId
+      - gameName
+      - isActive
+      - alpha
+      - maxMultiplier
+      - minCrashMultiplier
+      - multiplierGrowthRate
+      - growthAcceleration
+      - pointsPerLine
+      - pointsCashoutBonus
+      - pointsBoosterBonus
+      - boosterTierValues
+      - lootProbabilities
+      - minWinAmount
+      - popupTimeout
+      properties:
+        gameId:
+          type: string
+        gameName:
+          type: string
+        isActive:
+          type: boolean
+        alpha:
+          type: number
+          format: double
+        maxMultiplier:
+          type: number
+          format: double
+        minCrashMultiplier:
+          type: number
+          format: double
+          minimum: 1.0
+        multiplierGrowthRate:
+          type: number
+          format: double
+        growthAcceleration:
+          type: number
+          format: double
+          minimum: 1.0
+          maximum: 3.0
+        pointsPerLine:
+          type: integer
+          minimum: 0
+        pointsCashoutBonus:
+          type: integer
+          minimum: 0
+        pointsBoosterBonus:
+          type: integer
+          minimum: 0
+        boosterTierValues:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+            format: double
+        lootProbabilities:
+          $ref: "#/components/schemas/LootProbabilitiesDto"
+        minWinAmount:
+          type: integer
+          minimum: 0
+        popupTimeout:
+          type: integer
 tags:
+- name: Admin Config
+  description: Управление конфигурацией игры и hot-reload параметров
 - name: Authentication
   description: Авторизация и регистрация пользователей через JWT Bearer токен
+- name: Game
+  description: Управление игровым циклом crash-игры «Воздушный Шар»
 - name: Users
   description: Управление профилями пользователей (CRUD)
 paths:
@@ -204,6 +355,122 @@ paths:
       responses:
         "200":
           description: OK
+  /api/game/cashout:
+    post:
+      summary: Забрать выигрыш (Cashout)
+      description: Фиксирует текущий множитель и начисляет выигрыш на баланс пользователя
+      tags:
+      - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashoutRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/history:
+    get:
+      summary: История завершенных игр
+      description: Возвращает историю раундов (глобальную или персональную с флагом
+        my=true)
+      tags:
+      - Game
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      - name: my
+        in: query
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: OK
+  /api/game/house-edge:
+    get:
+      summary: Получить персональный House Edge игрока
+      description: "Возвращает текущий HE, RTP и EV авторизованного пользователя"
+      tags:
+      - Game
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/house-edge/reset:
+    post:
+      summary: Сбросить персональный House Edge
+      description: Сбрасывает House Edge игрока к базовому значению 0.04 (для тестирования/демо)
+      tags:
+      - Game
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/start:
+    post:
+      summary: Начать новый раунд игры
+      description: "Списывает ставку с баланса игрока, генерирует Provably Fair кр\
+        ах и запускает полет"
+      tags:
+      - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartRoundRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/state:
+    get:
+      summary: Получить состояние раунда
+      description: Возвращает текущее состояние активного раунда пользователя
+      tags:
+      - Game
+      parameters:
+      - name: roundId
+        in: query
+        schema:
+          $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: OK
+      security:
+      - jwtAuth: []
+  /api/game/top-up:
+    post:
+      summary: Быстрое пополнение баланса бонусов
+      description: Начисляет бонусные баллы на баланс текущего игрока без проверок (для тестирования)
+      tags:
+      - Game
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopUpBalanceRequest"
+        required: false
+      responses:
+        "200":
+          description: Баланс успешно пополнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopUpBalanceResponse"
+      security:
+      - jwtAuth: []
   /api/ping:
     get:
       responses:
@@ -325,3 +592,100 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserProfileResponse"
+  /api/users/me/top-up:
+    post:
+      summary: Быстрое пополнение собственного баланса
+      description: Начисляет бонусные баллы авторизованному пользователю без проверок (для тестирования)
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopUpBalanceRequest"
+        required: false
+      responses:
+        "200":
+          description: Баланс успешно пополнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopUpBalanceResponse"
+      security:
+      - jwtAuth: []
+  /api/users/{id}/top-up:
+    post:
+      summary: Быстрое пополнение баланса пользователя по ID
+      description: Начисляет бонусные баллы любому пользователю по его ID без проверок (для тестирования)
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopUpBalanceRequest"
+        required: false
+      responses:
+        "200":
+          description: Баланс успешно пополнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopUpBalanceResponse"
+  /api/admin/config:
+    get:
+      summary: Получить текущую конфигурацию игры
+      description: Возвращает актуальные параметры игры из in-memory кэша без задержек обращения к БД
+      tags:
+      - Admin Config
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []
+    put:
+      summary: Обновить конфигурацию игры (Hot-Reload)
+      description: Сохраняет параметры в БД и обновляет in-memory ссылку. Доступно только пользователям с ролью ADMIN
+      tags:
+      - Admin Config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameConfigDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []
+  /api/admin/config/reset:
+    post:
+      summary: Сбросить конфигурацию к дефолтной
+      description: Сбрасывает конфигурацию игры к эталонным настройкам по умолчанию. Доступно только пользователям с ролью ADMIN
+      tags:
+      - Admin Config
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []

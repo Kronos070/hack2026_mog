@@ -1,0 +1,124 @@
+// Игровой цикл полёта: анимация множителя через rAF без ререндеров React
+
+import { useCallback, useEffect, useRef } from 'react';
+import type { GameConfig, RoundStart } from '@/shared/api/contract';
+import { levelsPassedAt, multiplierAt } from '@/shared/lib/crash-math';
+import { soundManager } from '@/shared/lib/sound-manager';
+
+export interface FlightSnapshot {
+  multiplier: number;
+  progress: number;
+  levelsPassed: number;
+  boosterActivated: boolean;
+  crashed: boolean;
+}
+
+interface FlightCallbacks {
+  onLevel: (level: number) => void;
+  onBooster: () => void;
+  onCrash: () => void;
+}
+
+function progressInLevels(multiplier: number, levels: readonly number[]): number {
+  if (levels.length === 0) return 0;
+  const slot = 1 / (levels.length + 1);
+
+  for (let index = 0; index < levels.length; index += 1) {
+    const top = levels[index] ?? 1;
+    if (multiplier < top) {
+      const bottom = index === 0 ? 1 : (levels[index - 1] ?? 1);
+      const span = Math.log(top) - Math.log(bottom);
+      const ratio =
+        span > 0 ? (Math.log(multiplier) - Math.log(bottom)) / span : 0;
+      return Math.min((index + Math.max(ratio, 0)) * slot, 1);
+    }
+  }
+  return Math.min(levels.length * slot + slot * 0.5, 1);
+}
+
+export function useFlightEngine(
+  round: RoundStart | null,
+  config: GameConfig | undefined,
+  callbacks: FlightCallbacks,
+) {
+  const snapshot = useRef<FlightSnapshot>({
+    multiplier: 1,
+    progress: 0,
+    levelsPassed: 0,
+    boosterActivated: false,
+    crashed: false,
+  });
+  const cashedOut = useRef(false);
+  const boosterFactor = useRef(1);
+  const frame = useRef(0);
+  const handlers = useRef(callbacks);
+  handlers.current = callbacks;
+
+  const markCashout = useCallback(() => {
+    cashedOut.current = true;
+  }, []);
+
+  const getSnapshot = useCallback(() => snapshot.current, []);
+
+  useEffect(() => {
+    if (!round || !config) return undefined;
+
+    snapshot.current = {
+      multiplier: 1,
+      progress: 0,
+      levelsPassed: 0,
+      boosterActivated: false,
+      crashed: false,
+    };
+    cashedOut.current = false;
+    boosterFactor.current = 1;
+
+    const tick = (): void => {
+      const state = snapshot.current;
+      if (state.crashed) return;
+
+      const elapsed = Date.now() - round.startedAt;
+      const base = multiplierAt(elapsed, config);
+      const current = base * boosterFactor.current;
+
+      const passed = levelsPassedAt(base, round.levelMultipliers);
+      if (passed > state.levelsPassed) {
+        for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
+          handlers.current.onLevel(level);
+          soundManager.play('level-up', 0.5);
+
+          if (
+            round.boosterLevel === level &&
+            !cashedOut.current &&
+            !state.boosterActivated
+          ) {
+            state.boosterActivated = true;
+            boosterFactor.current = round.boosterMultiplier;
+            handlers.current.onBooster();
+            soundManager.play('boost', 0.7);
+          }
+        }
+        state.levelsPassed = passed;
+      }
+
+      state.multiplier = current;
+      state.progress = progressInLevels(base, round.levelMultipliers);
+
+      if (base >= round.crashMultiplier) {
+        state.crashed = true;
+        state.multiplier = round.crashMultiplier * boosterFactor.current;
+        state.progress = progressInLevels(round.crashMultiplier, round.levelMultipliers);
+        handlers.current.onCrash();
+        soundManager.play('crash', 0.8);
+        return;
+      }
+
+      frame.current = requestAnimationFrame(tick);
+    };
+
+    frame.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame.current);
+  }, [round, config]);
+
+  return { getSnapshot, markCashout };
+}

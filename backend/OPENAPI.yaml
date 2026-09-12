@@ -297,6 +297,76 @@ components:
           minimum: 0
         popupTimeout:
           type: integer
+    StatRadarDto:
+      type: object
+      required:
+      - patience
+      - boosters
+      - collector
+      - generosity
+      - winRate
+      - risk
+      - gamesAnalyzed
+      - totalGames
+      - nextRecalcIn
+      properties:
+        patience:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Выдержка (средний зафиксированный кэф побед)
+          example: 5.0
+        boosters:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Бустеры (частота выбора и активации)
+          example: 10.0
+        collector:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Коллекционер (прогресс пазлов и недавние дропы)
+          example: 6.7
+        generosity:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Размах/Щедрость (средний размер ставки)
+          example: 5.0
+        winRate:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Винрейт за анализируемое окно
+          example: 6.7
+        risk:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 10.0
+          description: Азарт/Риск (красная тема и дерзость кэшаута)
+          example: 7.0
+        gamesAnalyzed:
+          type: integer
+          format: int32
+          description: Количество проанализированных раундов в окне (0-30)
+          example: 30
+        totalGames:
+          type: integer
+          format: int64
+          description: Всего завершенных игр игрока
+          example: 30
+        nextRecalcIn:
+          type: integer
+          format: int32
+          description: Раундов до следующего планового пересчета
+          example: 10
 tags:
 - name: Admin Config
   description: Управление конфигурацией игры и hot-reload параметров
@@ -554,6 +624,21 @@ paths:
           description: OK
       security:
       - jwtAuth: []
+  /api/users/me/radar-stats:
+    get:
+      summary: Получить полигон характеристик текущего пользователя
+      description: Возвращает шестиугольник характеристик (выдержка, бустеры, коллекционер, щедрость, винрейт, риск) за последние 30 игр
+      tags:
+      - Users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatRadarDto"
+      security:
+      - jwtAuth: []
   /api/users/me/password:
     put:
       summary: Сменить пароль
@@ -592,6 +677,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserProfileResponse"
+  /api/users/{id}/radar-stats:
+    get:
+      summary: Получить полигон характеристик пользователя по ID
+      description: Возвращает публичный шестиугольник характеристик пользователя по его идентификатору
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatRadarDto"
   /api/users/me/top-up:
     post:
       summary: Быстрое пополнение собственного баланса

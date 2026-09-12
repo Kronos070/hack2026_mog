@@ -53,6 +53,7 @@ public class GameService {
     private final CrashGenerator crashGenerator;
     private final HouseEdgeCalculator houseEdgeCalculator;
     private final GameConfigService gameConfigService;
+    private final TournamentService tournamentService;
 
     /**
      * In-memory кэш активных раундов: userId -> ActiveGameRound
@@ -62,10 +63,12 @@ public class GameService {
     @Inject
     public GameService(UserRepository userRepository,
                        GameRoundRepository gameRoundRepository,
-                       GameConfigService gameConfigService) {
+                       GameConfigService gameConfigService,
+                       TournamentService tournamentService) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
         this.gameConfigService = gameConfigService;
+        this.tournamentService = tournamentService;
         this.crashGenerator = new CrashGenerator();
         this.houseEdgeCalculator = new HouseEdgeCalculator();
     }
@@ -77,23 +80,25 @@ public class GameService {
                        GameRoundRepository gameRoundRepository,
                        GameConfigService gameConfigService,
                        CrashGenerator crashGenerator,
-                       HouseEdgeCalculator houseEdgeCalculator) {
+                       HouseEdgeCalculator houseEdgeCalculator,
+                       TournamentService tournamentService) {
         this.userRepository = userRepository;
         this.gameRoundRepository = gameRoundRepository;
         this.gameConfigService = gameConfigService;
         this.crashGenerator = crashGenerator;
         this.houseEdgeCalculator = houseEdgeCalculator;
+        this.tournamentService = tournamentService;
     }
 
     public GameService(UserRepository userRepository,
                        GameRoundRepository gameRoundRepository,
                        CrashGenerator crashGenerator,
                        HouseEdgeCalculator houseEdgeCalculator) {
-        this(userRepository, gameRoundRepository, null, crashGenerator, houseEdgeCalculator);
+        this(userRepository, gameRoundRepository, null, crashGenerator, houseEdgeCalculator, null);
     }
 
     public GameService(UserRepository userRepository, GameRoundRepository gameRoundRepository) {
-        this(userRepository, gameRoundRepository, null);
+        this(userRepository, gameRoundRepository, null, null, null, null);
     }
 
     private GameConfigDto getCurrentConfigOrDefault() {
@@ -370,6 +375,10 @@ public class GameService {
         user.setBonusBalance(user.getBonusBalance() + winAmount);
         user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
 
+        if (tournamentService != null && pointsEarned > 0) {
+            tournamentService.recordRoundPoints(userId, user.getUsername(), pointsEarned);
+        }
+
         // Обновление персонального House Edge игрока (выигрыш)
         RoundOutcome winOutcome = RoundOutcome.win(
                 activeRound.betAmount(),
@@ -537,6 +546,9 @@ public class GameService {
             user.setCurrentHouseEdge(nextHe);
             user.setLastBetAmount(activeRound.betAmount());
             user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
+            if (tournamentService != null && pointsEarned > 0) {
+                tournamentService.recordRoundPoints(user.getId(), user.getUsername(), pointsEarned);
+            }
         }
 
         // Обновляем запись в БД
@@ -594,6 +606,10 @@ public class GameService {
         );
         user.setPoints((user.getPoints() != null ? user.getPoints() : 0L) + pointsEarned);
         round.setPointsEarned(pointsEarned);
+
+        if (tournamentService != null && pointsEarned > 0) {
+            tournamentService.recordRoundPoints(user.getId(), user.getUsername(), pointsEarned);
+        }
 
         round.setStatus(GameRound.STATUS_CRASHED);
         round.setIsWin(false);

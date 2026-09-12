@@ -2,6 +2,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSessionStore } from '@/entities/game/session-store';
 import { LoginPage } from '@/features/auth/LoginPage';
+import { HomePage } from '@/features/home/HomePage';
+import { ChooseBalloonPage } from '@/features/choose/ChooseBalloonPage';
 import { GamePage } from '@/features/game/GamePage';
 import { LeaderboardPage } from '@/features/leaderboard/LeaderboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -14,7 +16,12 @@ export function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/choose"
+        element={user ? <ChooseBalloonPage /> : <Navigate to="/login" replace />}
+      />
       <Route path="/game" element={user ? <GamePage /> : <Navigate to="/" replace />} />
       <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/" replace />} />
       <Route

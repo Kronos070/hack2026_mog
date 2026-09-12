@@ -134,8 +134,8 @@
 }
 
 :root {
-  --c-glass: rgb(74 104 140 / 0.34);
-  --c-glass-strong: rgb(86 116 150 / 0.40);
+  --c-glass: rgb(63 88 119 / 0.52);
+  --c-glass-strong: rgb(73 99 128 / 0.58);
   --c-glass-line: rgb(203 210 218 / 0.85);
   --c-sky-deep: #0d2a4a;
   --c-accent: #f5b324;
@@ -154,39 +154,23 @@
 
   .glass-panel {
     position: relative;
-    background: var(--color-glass);
+    background:
+      radial-gradient(
+        ellipse 75% 75% at 50% 50%,
+        rgb(40 62 90 / 0.55) 0%,
+        rgb(48 72 103 / 0.4) 55%,
+        rgb(72 104 142 / 0.12) 100%
+      ),
+      var(--color-glass);
     border: none;
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
   }
 
-  .glass-panel::before,
-  .glass-edge::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      165deg,
-      rgb(226 236 245 / 0.95),
-      rgb(151 181 208 / 0.75) 22%,
-      rgb(106 149 183 / 0.45) 55%,
-      rgb(92 130 165 / 0.3)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    z-index: 2;
-  }
-
   .glass-tile {
     background: var(--color-glass-strong);
-    border: 1px solid rgb(203 210 218 / 0.8);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22);
+    border: 1px solid rgb(104 136 172 / 0.55);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
   }
 
   .level-mark {
@@ -223,3 +207,66 @@
     text-shadow: 0 2px 6px rgb(4 20 40 / 0.6);
   }
 }
+
+/* Анимации стартового экрана: плавающие облака и парящие птицы */
+@keyframes drift-left {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(210px, -82px, 0); }
+}
+
+@keyframes drift-right {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-235px, -92px, 0); }
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(180px, -107px, 0); }
+}
+
+@keyframes float-back {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-190px, -102px, 0); }
+}
+
+@keyframes bird-glide {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(18px, -22px, 0) rotate(-4deg); }
+}
+
+@keyframes balloon-sway {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-2.5deg); }
+  50% { transform: translate3d(14px, -26px, 0) rotate(2.5deg); }
+}
+
+@keyframes balloon-sway-alt {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(2deg); }
+  50% { transform: translate3d(-16px, -30px, 0) rotate(-2deg); }
+}
+
+@keyframes title-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -12px, 0); }
+}
+
+.anim-drift-left,
+.anim-drift-right,
+.anim-float-soft,
+.anim-float-back,
+.anim-bird-left,
+.anim-bird-right,
+.anim-balloon-sway,
+.anim-balloon-sway-alt {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.anim-drift-left { animation: drift-left 24s ease-in-out infinite; }
+.anim-drift-right { animation: drift-right 27s ease-in-out infinite; }
+.anim-float-soft { animation: float-soft 21s ease-in-out infinite; }
+.anim-float-back { animation: float-back 23s ease-in-out infinite; }
+.anim-balloon-sway { animation: balloon-sway 5s ease-in-out infinite; }
+.anim-balloon-sway-alt { animation: balloon-sway-alt 6.5s ease-in-out infinite; }
+.anim-bird-left { animation: bird-glide 9s ease-in-out infinite; }
+.anim-bird-right { animation: bird-glide 12s ease-in-out infinite reverse; }
+.anim-title { animation: title-bob 6s ease-in-out infinite; }

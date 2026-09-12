@@ -15,6 +15,7 @@ import { HistoryList } from '@/features/history/HistoryList';
 import { CrashHistory } from '@/features/history/CrashHistory';
 import { TournamentTable } from '@/features/tournament/TournamentTable';
 import { RulesContent } from '@/features/bet/RulesContent';
+import { BalanceCard } from '@/features/bet/BalanceCard';
 import { BetPanel } from '@/features/bet/BetPanel';
 import { ActionBar } from '@/features/bet/ActionBar';
 import { FlightOverlay } from '@/features/flight/FlightOverlay';
@@ -87,6 +88,8 @@ export function GamePage() {
       }
       asideRight={
         <>
+          <BalanceCard balance={balance} />
+
           <BetPanel
             betCost={betCost}
             boosterTier={boosterTier}

@@ -25,13 +25,15 @@ export function BetPanel({
 }: BetPanelProps) {
   // Собирает параметры ставки для предстоящего раунда
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-4 transition-opacity',
-        locked && 'pointer-events-none opacity-60',
-      )}
-    >
-      <GlassPanel title="Бустер" subtitle="Выберите фрагмент пазла">
+    <>
+      <GlassPanel
+        title="Бустер"
+        subtitle="Выберите фрагмент пазла"
+        className={cn(
+          'flex min-h-0 flex-1 basis-0 flex-col justify-center px-5 py-1 transition-opacity',
+          locked && 'pointer-events-none opacity-60',
+        )}
+      >
         <BoosterPicker
           value={boosterTier}
           multipliers={multipliers}
@@ -40,7 +42,14 @@ export function BetPanel({
         />
       </GlassPanel>
 
-      <GlassPanel title="Ставка" subtitle="Сумма ставок, бонусов">
+      <GlassPanel
+        title="Ставка"
+        subtitle="Сумма ставок, бонусов"
+        className={cn(
+          'flex min-h-0 flex-1 basis-0 flex-col justify-center px-5 py-1 transition-opacity',
+          locked && 'pointer-events-none opacity-60',
+        )}
+      >
         <BetAmountField
           value={betCost}
           balance={balance}
@@ -48,6 +57,6 @@ export function BetPanel({
           onChange={(value) => onBetChange(value, boosterTier)}
         />
       </GlassPanel>
-    </div>
+    </>
   );
 }

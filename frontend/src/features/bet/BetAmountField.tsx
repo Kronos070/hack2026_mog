@@ -26,7 +26,7 @@ export function BetAmountField({
     <div>
       <div
         className={cn(
-          'flex items-center gap-2 rounded-xl px-3 py-2 transition-colors',
+          'flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors',
           'glass-tile',
           tooHigh && 'border-red-theme',
         )}
@@ -42,7 +42,7 @@ export function BetAmountField({
           aria-label="Сумма ставки"
           onChange={(event) => onChange(Math.floor(Number(event.target.value)) || 0)}
           className={cn(
-            'no-spinner min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums outline-none',
+            'no-spinner min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none',
             'placeholder:font-normal placeholder:text-on-glass-dim',
             tooHigh ? 'text-red-theme' : 'text-on-glass',
           )}
@@ -52,19 +52,19 @@ export function BetAmountField({
           disabled={disabled || value + STEP > balance}
           onClick={() => onChange(Math.min(value + STEP, balance))}
           aria-label="Увеличить ставку"
-          className="glass-tile shrink-0 rounded-md p-1 text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+          className="glass-tile shrink-0 rounded-lg p-2 text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Plus size={16} />
+          <Plus size={22} />
         </button>
       </div>
 
-      <div className="mt-2.5 flex gap-1.5">
+      <div className="mt-3 flex gap-2">
         {BET_PRESETS.map((preset) => (
           <button
             key={preset}
             disabled={disabled || preset > balance}
             onClick={() => onChange(preset)}
-            className="glass-tile flex-1 rounded-lg px-1 py-1 text-xs font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+            className="glass-tile flex-1 rounded-lg px-1 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {preset}
           </button>
@@ -72,7 +72,7 @@ export function BetAmountField({
         <button
           disabled={disabled || balance < 1}
           onClick={() => onChange(balance)}
-          className="glass-tile shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+          className="glass-tile shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Весь баланс
         </button>

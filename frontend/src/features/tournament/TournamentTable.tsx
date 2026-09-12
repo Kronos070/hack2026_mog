@@ -61,10 +61,7 @@ function Row({
     <li>
       <Link
         to={isCurrent ? '/profile' : `/profile/${entry.playerId}`}
-        className={cn(
-          'glass-tile flex items-center gap-2.5 rounded-sm px-3 py-3 text-base transition-all hover:brightness-125',
-          isCurrent && 'ring-1 ring-accent/60',
-        )}
+        className="glass-tile flex items-center gap-2.5 rounded-xl px-3 py-3 text-base transition-all hover:brightness-125"
       >
         <span
           className={cn(

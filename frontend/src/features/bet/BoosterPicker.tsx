@@ -20,7 +20,7 @@ export function BoosterPicker({
 }: BoosterPickerProps) {
   // Переключает множитель бустера для следующего раунда
   return (
-    <div className="grid grid-cols-4 gap-2.5">
+    <div className="grid grid-cols-4 gap-3.5">
       {TIERS.map((tier) => {
         const multiplier = multipliers[tier - 1] ?? 1;
         const active = value === tier;
@@ -31,7 +31,7 @@ export function BoosterPicker({
             onClick={() => onChange(tier)}
             aria-pressed={active}
             className={cn(
-              'flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 transition-all disabled:cursor-not-allowed',
+              'flex flex-col items-center gap-2 rounded-xl px-2 py-3 transition-all disabled:cursor-not-allowed',
               active
                 ? 'bg-linear-to-b from-pick to-pick-dark shadow-[0_4px_16px_rgb(60_130_10/0.5)]'
                 : 'glass-tile hover:brightness-125',
@@ -40,9 +40,9 @@ export function BoosterPicker({
             <img
               src={`/images/boosters/tier-${tier}.png`}
               alt=""
-              className="h-10 w-auto drop-shadow-[0_2px_4px_rgb(4_20_40/0.5)]"
+              className="h-12 w-auto drop-shadow-[0_2px_4px_rgb(4_20_40/0.5)]"
             />
-            <span className="text-center text-[11px] font-semibold leading-tight text-on-glass">
+            <span className="text-center text-sm font-semibold leading-tight text-on-glass">
               x{multiplier}
               <span className="block font-normal text-on-glass-dim">
                 {multiplier === 1 ? '(без усил.)' : `(тир ${tier})`}

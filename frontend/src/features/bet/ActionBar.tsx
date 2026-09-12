@@ -29,21 +29,21 @@ export function ActionBar({
 }: ActionBarProps) {
   // Подменяет «Начать» на «Забрать» во время полёта
   return (
-    <div className="grid shrink-0 gap-3">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="mt-10 grid shrink-0 gap-5">
+      <div className="grid grid-cols-2 gap-4">
         <Button
-          variant="slate"
+          variant="glass"
           disabled={flying || !hasLastBet}
           onClick={onRepeat}
-          className="whitespace-nowrap rounded-full px-2 py-3 text-sm font-semibold"
+          className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
         >
           Повторить ставку
         </Button>
         <Button
-          variant="slate"
+          variant="glass"
           disabled={flying}
           onClick={onExpress}
-          className="whitespace-nowrap rounded-full px-2 py-3 text-sm font-semibold"
+          className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
         >
           Экспресс-ставка
         </Button>
@@ -54,7 +54,7 @@ export function ActionBar({
           variant="gold"
           disabled={!canCashout || cashedOut}
           onClick={onCashout}
-          className="rounded-full py-4 text-2xl font-extrabold"
+          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
         >
           {cashedOut ? 'Выигрыш зафиксирован' : 'Забрать'}
         </Button>
@@ -63,7 +63,7 @@ export function ActionBar({
           variant="gold"
           disabled={!canStart || starting}
           onClick={onStart}
-          className="rounded-full py-4 text-2xl font-extrabold"
+          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
         >
           {starting ? 'Запуск…' : 'Начать'}
         </Button>

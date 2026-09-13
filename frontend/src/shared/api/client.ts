@@ -42,7 +42,10 @@ import { clearToken, saveToken } from '@/shared/api/auth-token';
 import { http, USE_MOCK } from '@/shared/api/http';
 import { buildLevelMultipliers } from '@/shared/lib/crash-math';
 import { DEFAULT_CONFIG } from '@/shared/config/default-config';
+import { disconnectGameSocket } from '@/features/flight/game-socket';
 import * as mock from '@/shared/api/mock-server';
+
+let cachedConfig: GameConfig | null = null;
 
 export interface Credentials {
   login: string;
@@ -90,6 +93,7 @@ export const api = {
   async logout(): Promise<void> {
     if (USE_MOCK) return mock.mockLogout();
     clearToken();
+    disconnectGameSocket();
   },
 
   async startRound(request: BetRequest): Promise<RoundStart> {
@@ -100,7 +104,7 @@ export const api = {
       boosterMultiplier: request.boosterTier,
     });
     const parsed = roundStartResponseSchema.parse(data);
-    const config = await this.getConfig().catch(() => DEFAULT_CONFIG);
+    const config = cachedConfig ?? DEFAULT_CONFIG;
     return toRoundStart(parsed, request.theme, buildLevelMultipliers(request.theme, config));
   },
 
@@ -140,14 +144,21 @@ export const api = {
 
   async getConfig(): Promise<GameConfig> {
     if (USE_MOCK) return gameConfigSchema.parse(mock.mockGetConfig());
-    const { data } = await http.get('/admin/config');
-    return gameConfigSchema.parse(data);
+    if (cachedConfig) return cachedConfig;
+    try {
+      const { data } = await http.get('/admin/config');
+      cachedConfig = gameConfigSchema.parse(data);
+      return cachedConfig;
+    } catch {
+      return DEFAULT_CONFIG;
+    }
   },
 
   async saveConfig(config: GameConfig): Promise<GameConfig> {
     if (USE_MOCK) return gameConfigSchema.parse(mock.mockSaveConfig(config));
     const { data } = await http.put('/admin/config', config);
-    return gameConfigSchema.parse(data);
+    cachedConfig = gameConfigSchema.parse(data);
+    return cachedConfig;
   },
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
@@ -197,7 +208,8 @@ export const api = {
   async resetConfig(): Promise<GameConfig> {
     if (USE_MOCK) return gameConfigSchema.parse(mock.mockGetConfig());
     const { data } = await http.post('/admin/config/reset');
-    return gameConfigSchema.parse(data);
+    cachedConfig = gameConfigSchema.parse(data);
+    return cachedConfig;
   },
 
   /**

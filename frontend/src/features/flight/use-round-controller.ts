@@ -1,6 +1,6 @@
 // Управление раундом на едином экране: старт, cashout и завершение без смены страницы
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ import { useSessionStore } from '@/entities/game/session-store';
 import { useAchievementStore } from '@/entities/game/achievement-store';
 import { useFlightEngine } from '@/features/flight/use-flight-engine';
 import { useSocketFlight } from '@/features/flight/use-socket-flight';
-import type { SocketMessage } from '@/features/flight/game-socket';
+import { ensureGameSocketConnected, type SocketMessage } from '@/features/flight/game-socket';
 import { buildRoundResult } from '@/features/flight/build-round-result';
 import { soundManager } from '@/shared/lib/sound-manager';
 
@@ -22,7 +22,7 @@ export function useRoundController() {
   const pushAchievements = useAchievementStore((state) => state.push);
   const { phase, round, result, startRound, finishRound, resetToIdle } = useRoundStore();
 
-  const [canCashout, setCanCashout] = useState(true);
+  const [canCashout, setCanCashout] = useState(false);
   const [cashedOut, setCashedOut] = useState(false);
   const [boosterHit, setBoosterHit] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -31,12 +31,22 @@ export function useRoundController() {
 
   const { data: config } = useQuery({ queryKey: ['config'], queryFn: () => api.getConfig() });
 
+  useEffect(() => {
+    if (!api.isMock) {
+      ensureGameSocketConnected();
+    }
+  }, []);
+
   const refreshUser = useCallback(async () => {
     const fresh = await api.getCurrentUser();
     if (fresh) setUser(fresh);
   }, [setUser]);
 
-  const handleLevel = useCallback(() => {
+  const handleLevel = useCallback((level: number) => {
+    // Разблокировка вывода после преодоления 1-го уровня по CASE.md
+    if (level >= 1) {
+      setCanCashout(true);
+    }
   }, []);
 
   const handleBooster = useCallback(() => {
@@ -103,16 +113,16 @@ export function useRoundController() {
   const start = useCallback(
     async (theme: Theme, cost: number, boosterTier: BoosterTier): Promise<void> => {
       setStarting(true);
+      soundManager.play('select', 0.6);
       try {
         const started = await api.startRound({ theme, cost, boosterTier });
-        setCanCashout(true);
+        setCanCashout(false);
         setCashedOut(false);
         setBoosterHit(false);
         boosterRef.current = false;
         cashoutRef.current = null;
         startRound(started);
-        await refreshUser();
-        soundManager.play('select', 0.6);
+        void refreshUser();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Не удалось начать раунд');
       } finally {

@@ -1,19 +1,39 @@
 // Стартовый экран: титульный логотип, кнопка запуска и анимированное небо
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { api } from '@/shared/api/client';
 import { useSessionStore } from '@/entities/game/session-store';
 import { AppHeader } from '@/shared/ui/AppHeader';
 import { SkyDecor } from '@/features/home/SkyDecor';
 import { soundManager } from '@/shared/lib/sound-manager';
 
+const DEMO_PLAYER = { login: 'demo_player', password: 'admin123' };
+
 export function HomePage() {
   // Встречает игрока и ведёт в игру одним нажатием
   const navigate = useNavigate();
   const user = useSessionStore((state) => state.user);
+  const setUser = useSessionStore((state) => state.setUser);
+  const [pending, setPending] = useState(false);
 
-  const start = (): void => {
+  const start = async (): Promise<void> => {
     soundManager.play('select', 0.5);
-    navigate(user ? '/choose' : '/login');
+    if (user) {
+      navigate('/choose');
+      return;
+    }
+
+    setPending(true);
+    try {
+      setUser(await api.login(DEMO_PLAYER));
+      navigate('/choose');
+    } catch {
+      toast.error('Не удалось войти в игру');
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -33,10 +53,11 @@ export function HomePage() {
           />
 
           <button
-            onClick={start}
-            className="btn-gold px-[clamp(2.5rem,8vw,5rem)] py-[clamp(0.75rem,1.8vw,1.25rem)] text-[clamp(1.25rem,2.4vw,1.875rem)] font-extrabold text-sky-deep"
+            onClick={() => void start()}
+            disabled={pending}
+            className="btn-gold px-[clamp(2.5rem,8vw,5rem)] py-[clamp(0.75rem,1.8vw,1.25rem)] text-[clamp(1.25rem,2.4vw,1.875rem)] font-extrabold text-sky-deep disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Играть!
+            {pending ? 'Входим…' : 'Играть!'}
           </button>
         </main>
       </div>

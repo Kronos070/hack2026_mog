@@ -14,8 +14,15 @@ export function SkyLayout() {
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <AppHeader />
-        <main className="mx-auto w-[94%] max-w-[1600px] flex-1 py-6">
-          <div key={pathname} className="glass-panel anim-page rounded-3xl p-6 text-on-glass">
+        <main
+          className={`mx-auto w-[94%] flex-1 py-6 ${
+            pathname === '/admin' ? 'flex max-w-lg items-center' : 'max-w-[1600px]'
+          }`}
+        >
+          <div
+            key={pathname}
+            className="glass-panel anim-page w-full rounded-3xl p-6 text-on-glass"
+          >
             <Outlet />
           </div>
         </main>

@@ -98,7 +98,7 @@ export function useRoundController() {
   });
 
   const getSnapshot = api.isMock ? localFlight.getSnapshot : socketFlight.getSnapshot;
-  const markCashout = localFlight.markCashout;
+  const markCashout = api.isMock ? localFlight.markCashout : socketFlight.markCashout;
 
   const start = useCallback(
     async (theme: Theme, cost: number, boosterTier: BoosterTier): Promise<void> => {

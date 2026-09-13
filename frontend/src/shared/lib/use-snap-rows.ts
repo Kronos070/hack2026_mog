@@ -11,6 +11,12 @@ export function useSnapRows<T extends HTMLElement>() {
     if (!box) return undefined;
 
     const fit = (): void => {
+      // на узких экранах список растёт по контенту, подрезать нечего
+      if (window.innerWidth < 1024) {
+        box.style.maxHeight = '';
+        return;
+      }
+
       const items = box.querySelectorAll<HTMLElement>(':scope > * > *');
       const first = items[0];
       if (!first) return;
@@ -33,10 +39,14 @@ export function useSnapRows<T extends HTMLElement>() {
 
     const observer = new ResizeObserver(fit);
     observer.observe(box);
+    window.addEventListener('resize', fit);
     const list = box.firstElementChild;
     if (list) observer.observe(list);
 
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener('resize', fit);
+      observer.disconnect();
+    };
   }, []);
 
   return ref;

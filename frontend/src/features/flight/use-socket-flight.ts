@@ -22,12 +22,17 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
+    cashedOut: false,
     crashed: false,
   });
   const handlers = useRef(callbacks);
   handlers.current = callbacks;
 
   const getSnapshot = useCallback(() => snapshot.current, []);
+
+  const markCashout = useCallback(() => {
+    snapshot.current.cashedOut = true;
+  }, []);
 
   useEffect(() => {
     if (!round) return undefined;
@@ -38,6 +43,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
+      cashedOut: false,
       crashed: false,
     };
 
@@ -67,6 +73,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       }
 
       if (message.type === 'CASHOUT') {
+        state.cashedOut = true;
         handlers.current.onCashout(message);
         return;
       }
@@ -86,5 +93,5 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     return disconnect;
   }, [round]);
 
-  return { getSnapshot };
+  return { getSnapshot, markCashout };
 }

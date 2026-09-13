@@ -1,6 +1,6 @@
 // Единый игровой экран: ставка, полёт и итоги без перехода между страницами
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import type { BoosterTier } from '@/shared/api/contract';
@@ -11,11 +11,9 @@ import { useSessionStore } from '@/entities/game/session-store';
 import { useRoundController } from '@/features/flight/use-round-controller';
 import { GameLayout } from '@/shared/ui/GameLayout';
 import { GlassPanel } from '@/shared/ui/GlassPanel';
-import { Modal } from '@/shared/ui/Modal';
 import { HistoryList } from '@/features/history/HistoryList';
 import { CrashHistory } from '@/features/history/CrashHistory';
 import { TournamentTable } from '@/features/tournament/TournamentTable';
-import { RulesContent } from '@/features/bet/RulesContent';
 import { BalanceCard } from '@/features/bet/BalanceCard';
 import { BetPanel } from '@/features/bet/BetPanel';
 import { ActionBar } from '@/features/bet/ActionBar';
@@ -25,7 +23,6 @@ import { ResultModal } from '@/features/results/ResultModal';
 export function GamePage() {
   // Управляет всеми фазами раунда в пределах одного экрана
   const { user, theme, betCost, boosterTier, lastBet, setBet, rememberBet } = useSessionStore();
-  const [rulesOpen, setRulesOpen] = useState(false);
   const historyRef = useSnapRows<HTMLDivElement>();
 
   const controller = useRoundController();
@@ -58,7 +55,6 @@ export function GamePage() {
 
   return (
     <GameLayout
-      onOpenRules={() => setRulesOpen(true)}
       round={round}
       levels={levels}
       theme={round?.theme ?? theme}
@@ -78,9 +74,9 @@ export function GamePage() {
           <GlassPanel
             title="История игр"
             align="center"
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex flex-col lg:min-h-0 lg:flex-1"
             bodyRef={historyRef}
-            bodyClassName="no-scrollbar min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto"
+            bodyClassName="no-scrollbar max-h-[45vh] snap-y snap-mandatory overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1"
           >
             <HistoryList entries={history} />
           </GlassPanel>
@@ -88,8 +84,8 @@ export function GamePage() {
           <GlassPanel
             title="Турнирная таблица"
             align="center"
-            className="flex min-h-0 flex-1 flex-col"
-            bodyClassName="no-scrollbar min-h-0 flex-1 overflow-y-auto"
+            className="flex flex-col lg:min-h-0 lg:flex-1"
+            bodyClassName="no-scrollbar max-h-[45vh] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1"
           >
             <TournamentTable />
           </GlassPanel>
@@ -97,16 +93,20 @@ export function GamePage() {
       }
       asideRight={
         <>
-          <BalanceCard balance={balance} />
+          <div className="grid gap-[clamp(0.5rem,1.4vw,1.25rem)] lg:grid-rows-[auto_minmax(min-content,1fr)]">
+            <div className="hidden lg:block">
+              <BalanceCard balance={balance} />
+            </div>
 
-          <BetPanel
-            betCost={betCost}
-            boosterTier={boosterTier}
-            balance={balance}
-            multipliers={multipliers}
-            locked={flying}
-            onBetChange={setBet}
-          />
+            <BetPanel
+              betCost={betCost}
+              boosterTier={boosterTier}
+              balance={balance}
+              multipliers={multipliers}
+              locked={flying}
+              onBetChange={setBet}
+            />
+          </div>
 
           <ActionBar
             flying={flying}
@@ -131,10 +131,6 @@ export function GamePage() {
         </>
       }
     >
-      <Modal open={rulesOpen} title="Правила игры" onClose={() => setRulesOpen(false)}>
-        <RulesContent />
-      </Modal>
-
       {phase === 'finished' && result && (
         <ResultModal result={result} onClose={controller.playAgain} />
       )}

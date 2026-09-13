@@ -54,6 +54,9 @@ public class User {
     @Column(name = "puzzle_pity", nullable = false)
     private Integer puzzlePity = 0;
 
+    @Column(name = "fragment_balance", nullable = false)
+    private Integer fragmentBalance = 6;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -68,6 +71,7 @@ public class User {
         this.passwordHash = passwordHash;
         this.bonusBalance = 1000L;
         this.points = 0L;
+        this.fragmentBalance = 6;
         this.role = "USER";
         this.currentHouseEdge = 0.04;
     }
@@ -86,6 +90,9 @@ public class User {
         }
         if (points == null) {
             points = 0L;
+        }
+        if (fragmentBalance == null) {
+            fragmentBalance = 6;
         }
         if (role == null) {
             role = "USER";
@@ -218,5 +225,13 @@ public class User {
 
     public void setPuzzlePity(Integer puzzlePity) {
         this.puzzlePity = puzzlePity != null ? puzzlePity : 0;
+    }
+
+    public Integer getFragmentBalance() {
+        return fragmentBalance != null ? fragmentBalance : 0;
+    }
+
+    public void setFragmentBalance(Integer fragmentBalance) {
+        this.fragmentBalance = fragmentBalance != null ? Math.clamp(fragmentBalance, 0, 10) : 0;
     }
 }

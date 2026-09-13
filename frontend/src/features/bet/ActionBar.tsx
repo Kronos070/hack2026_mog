@@ -2,6 +2,7 @@
 
 import { Button } from '@/shared/ui/Button';
 import { soundManager } from '@/shared/lib/sound-manager';
+import { cn } from '@/shared/lib/cn';
 
 interface ActionBarProps {
   flying: boolean;
@@ -10,10 +11,11 @@ interface ActionBarProps {
   canCashout: boolean;
   cashedOut: boolean;
   hasLastBet: boolean;
+  autoCashout2x: boolean;
   onStart: () => void;
   onCashout: () => void;
   onRepeat: () => void;
-  onExpress: () => void;
+  onToggleAutoCashout: () => void;
 }
 
 export function ActionBar({
@@ -23,10 +25,11 @@ export function ActionBar({
   canCashout,
   cashedOut,
   hasLastBet,
+  autoCashout2x,
   onStart,
   onCashout,
   onRepeat,
-  onExpress,
+  onToggleAutoCashout,
 }: ActionBarProps) {
   // Подменяет «Начать» на «Забрать» во время полёта
   return (
@@ -45,14 +48,18 @@ export function ActionBar({
         </Button>
         <Button
           variant="glass"
-          disabled={flying}
           onClick={() => {
             soundManager.play('select', 0.5);
-            onExpress();
+            onToggleAutoCashout();
           }}
-          className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-[clamp(0.625rem,1.6vw,1.25rem)] text-[clamp(0.8rem,1.15vw,1.125rem)] font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
+          className={cn(
+            'whitespace-nowrap rounded-full border px-3 py-[clamp(0.625rem,1.6vw,1.25rem)] text-[clamp(0.8rem,1.15vw,1.125rem)] font-semibold backdrop-blur-md transition-all',
+            autoCashout2x
+              ? 'border-amber-300 bg-amber-400/30 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.35)]'
+              : 'border-glass-line/50 bg-sky-deep/[0.65] text-on-glass hover:bg-sky-deep',
+          )}
         >
-          Экспресс-ставка
+          {autoCashout2x ? 'Автовывод x2 ✓' : 'Автовывод x2'}
         </Button>
       </div>
 

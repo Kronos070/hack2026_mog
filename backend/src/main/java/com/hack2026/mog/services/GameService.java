@@ -203,6 +203,18 @@ public class GameService {
         Double boosterThreshold = null;
 
         if (boosterMult > 1) {
+            int boosterCost = currentConfig.getBoosterCost(boosterMult);
+            if (boosterCost > 0) {
+                int currentFragments = user.getFragmentBalance() != null ? user.getFragmentBalance() : 0;
+                if (currentFragments < boosterCost) {
+                    throw new BadRequestException("Недостаточно фрагментов для активации бустера x" + boosterMult +
+                            ": требуется " + boosterCost + ", доступно " + currentFragments);
+                }
+                user.setFragmentBalance(currentFragments - boosterCost);
+                LOG.infof("Booster purchased: userId=%d, booster=x%d, cost=%d fragments, remainingFragments=%d",
+                        userId, boosterMult, boosterCost, user.getFragmentBalance());
+            }
+
             boosterLevel = GameLevelConfig.determineBoosterLevel(theme, crashResult.hashHex());
             boosterThreshold = GameLevelConfig.getThresholdForLevel(theme, boosterLevel);
         }

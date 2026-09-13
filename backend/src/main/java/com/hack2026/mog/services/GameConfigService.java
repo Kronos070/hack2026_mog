@@ -1,6 +1,7 @@
 package com.hack2026.mog.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hack2026.mog.dto.config.BoosterTierPricingDto;
 import com.hack2026.mog.dto.config.GameConfigDto;
 import com.hack2026.mog.entities.GameConfigEntity;
 import com.hack2026.mog.repositories.GameConfigRepository;
@@ -11,6 +12,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -124,5 +127,54 @@ public class GameConfigService {
     public GameConfigDto resetConfig() {
         GameConfigDto defaults = GameConfigDto.defaultConfig();
         return saveConfig(defaults);
+    }
+
+    /**
+     * Получить список стоимости бустеров во фрагментах по тирам.
+     */
+    public List<BoosterTierPricingDto> getBoosterPricing() {
+        GameConfigDto cfg = getCurrentConfig();
+        List<Double> mults = cfg.boosterTierValues();
+        List<Integer> costs = cfg.boosterCostFragments();
+        List<BoosterTierPricingDto> result = new ArrayList<>();
+        for (int i = 0; i < mults.size(); i++) {
+            int tier = i + 1;
+            double mult = mults.get(i);
+            int cost = (costs != null && i < costs.size()) ? costs.get(i) : 0;
+            result.add(new BoosterTierPricingDto(tier, mult, cost));
+        }
+        return result;
+    }
+
+    /**
+     * Обновить стоимость бустеров во фрагментах.
+     */
+    @Transactional
+    public List<BoosterTierPricingDto> updateBoosterPricing(List<Integer> newCosts) {
+        Objects.requireNonNull(newCosts, "newCosts must not be null");
+        if (newCosts.size() != 4) {
+            throw new IllegalArgumentException("Требуется список ровно из 4 стоимостей бустеров (для тиров 1..4)");
+        }
+        GameConfigDto current = getCurrentConfig();
+        GameConfigDto updated = new GameConfigDto(
+                current.gameId(),
+                current.gameName(),
+                current.isActive(),
+                current.alpha(),
+                current.maxMultiplier(),
+                current.minCrashMultiplier(),
+                current.multiplierGrowthRate(),
+                current.growthAcceleration(),
+                current.pointsPerLine(),
+                current.pointsCashoutBonus(),
+                current.pointsBoosterBonus(),
+                current.boosterTierValues(),
+                newCosts,
+                current.lootProbabilities(),
+                current.minWinAmount(),
+                current.popupTimeout()
+        );
+        saveConfig(updated);
+        return getBoosterPricing();
     }
 }

@@ -11,6 +11,8 @@ interface BetPanelProps {
   boosterTier: BoosterTier;
   balance: number;
   multipliers: readonly number[];
+  boosterCosts?: readonly number[];
+  fragmentBalance?: number;
   locked: boolean;
   onBetChange: (cost: number, tier: BoosterTier) => void;
 }
@@ -20,6 +22,8 @@ export function BetPanel({
   boosterTier,
   balance,
   multipliers,
+  boosterCosts = [0, 2, 4, 6],
+  fragmentBalance = 6,
   locked,
   onBetChange,
 }: BetPanelProps) {
@@ -36,6 +40,8 @@ export function BetPanel({
         <BoosterPicker
           value={boosterTier}
           multipliers={multipliers}
+          costs={boosterCosts}
+          fragmentBalance={fragmentBalance}
           disabled={locked}
           onChange={(tier) => onBetChange(betCost, tier)}
         />

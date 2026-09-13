@@ -34,14 +34,14 @@ import java.util.stream.Collectors;
 public class MetaGameService {
 
     private static final Logger LOG = Logger.getLogger(MetaGameService.class);
-    public static final int TOTAL_PUZZLE_PIECES = 9;
+    public static final int TOTAL_PUZZLE_PIECES = 10;
 
     public record AchievementDef(String id, String title, String description, String letter) {}
 
     public static final List<String> PUZZLE_PIECE_IDS = List.of(
             "piece_1", "piece_2", "piece_3",
             "piece_4", "piece_5", "piece_6",
-            "piece_7", "piece_8", "piece_9"
+            "piece_7", "piece_8", "piece_9", "piece_10"
     );
 
     public static final List<AchievementDef> ACHIEVEMENTS = List.of(
@@ -52,7 +52,7 @@ public class MetaGameService {
             new AchievementDef("risky_captain", "Рисковый капитан", "Забрать выигрыш на множителе x20 или выше", "Р"),
             new AchievementDef("win_streak_3", "Серия побед", "Одержать победу в 3 раундах подряд", "П"),
             new AchievementDef("booster_master", "Мастер бустеров", "Активировать бустер во время полета", "М"),
-            new AchievementDef("puzzle_collector", "Коллекционер пазлов", "Собрать все 9 фрагментов пазла", "К"),
+            new AchievementDef("puzzle_collector", "Коллекционер пазлов", "Собрать все 10 фрагментов пазла", "К"),
             new AchievementDef("high_roller", "Щедрый игрок", "Сделать ставку от 250 бонусов за раунд", "Щ"),
             new AchievementDef("sky_legend", "Легенда небес", "Достичь наивысшего ранга «Легенда небес»", "Л")
     );
@@ -102,10 +102,9 @@ public class MetaGameService {
 
     private RewardDto evaluatePuzzleDrop(User user) {
         Long userId = user.getId();
-        List<String> collectedPieceIds = userPuzzlePieceRepository.findPieceIdsByUserId(userId);
-        int collectedCount = collectedPieceIds.size();
+        int currentFragments = user.getFragmentBalance() != null ? user.getFragmentBalance() : 0;
 
-        if (collectedCount >= TOTAL_PUZZLE_PIECES) {
+        if (currentFragments >= TOTAL_PUZZLE_PIECES) {
             return RewardDto.puzzlePiece("completed", "Коллекция собрана", TOTAL_PUZZLE_PIECES, TOTAL_PUZZLE_PIECES);
         }
 
@@ -115,31 +114,29 @@ public class MetaGameService {
         boolean dropped = ThreadLocalRandom.current().nextDouble() < dropChance;
 
         if (dropped) {
-            List<String> missingPieces = PUZZLE_PIECE_IDS.stream()
-                    .filter(id -> !collectedPieceIds.contains(id))
-                    .toList();
+            int newBalance = Math.min(TOTAL_PUZZLE_PIECES, currentFragments + 1);
+            user.setFragmentBalance(newBalance);
+            user.setPuzzlePity(0);
 
-            if (!missingPieces.isEmpty()) {
-                String pickedPieceId = missingPieces.get(ThreadLocalRandom.current().nextInt(missingPieces.size()));
+            String pickedPieceId = "piece_" + newBalance;
+            List<String> collectedPieceIds = userPuzzlePieceRepository.findPieceIdsByUserId(userId);
+            if (!collectedPieceIds.contains(pickedPieceId)) {
                 UserPuzzlePiece piece = new UserPuzzlePiece(user, pickedPieceId);
                 userPuzzlePieceRepository.persist(piece);
-
-                user.setPuzzlePity(0);
-                int newCount = collectedCount + 1;
-                String label = getPuzzleLabel(pickedPieceId);
-
-                LOG.infof("Puzzle piece dropped: userId=%d, pieceId=%s, collected=%d/%d, pityReset=0",
-                        userId, pickedPieceId, newCount, TOTAL_PUZZLE_PIECES);
-
-                return RewardDto.puzzlePiece(pickedPieceId, label, newCount, TOTAL_PUZZLE_PIECES);
             }
+
+            String label = getPuzzleLabel(pickedPieceId);
+            LOG.infof("Puzzle piece dropped: userId=%d, pieceId=%s, collected=%d/%d, pityReset=0",
+                    userId, pickedPieceId, newBalance, TOTAL_PUZZLE_PIECES);
+
+            return RewardDto.puzzlePiece(pickedPieceId, label, newBalance, TOTAL_PUZZLE_PIECES);
         }
 
         // Без выпадения: увеличиваем pity-счетчик
         user.setPuzzlePity(pity + 1);
         LOG.debug("Puzzle piece not dropped: userId=" + userId + ", pity=" + (pity + 1) + ", dropChance=" + dropChance);
 
-        return RewardDto.puzzlePiece("none", "Без фрагмента", collectedCount, TOTAL_PUZZLE_PIECES);
+        return RewardDto.puzzlePiece("none", "Без фрагмента", currentFragments, TOTAL_PUZZLE_PIECES);
     }
 
     private List<AchievementDto> evaluateAchievements(User user, GameRound round, boolean isWin,
@@ -171,7 +168,8 @@ public class MetaGameService {
                 case "risky_captain" -> conditionMet = stats.bestMultiplier() >= 20.0 || (isWin && roundMultiplier >= 20.0);
                 case "win_streak_3" -> conditionMet = isWin && gameRoundRepository.hasWinStreak(userId, 3);
                 case "booster_master" -> conditionMet = boosterActivated;
-                case "puzzle_collector" -> conditionMet = reward != null && reward.collected() >= TOTAL_PUZZLE_PIECES;
+                case "puzzle_collector" -> conditionMet = (user.getFragmentBalance() != null && user.getFragmentBalance() >= TOTAL_PUZZLE_PIECES)
+                        || (reward != null && reward.collected() >= TOTAL_PUZZLE_PIECES);
                 case "high_roller" -> conditionMet = stats.maxBet() >= 250 || currentBet >= 250;
                 case "sky_legend" -> conditionMet = profit >= 50000.0;
             }
@@ -200,7 +198,10 @@ public class MetaGameService {
         }
 
         GameRoundRepository.UserGameStats stats = gameRoundRepository.getUserStats(userId);
-        List<String> puzzle = userPuzzlePieceRepository.findPieceIdsByUserId(userId);
+        int fragmentCount = user.getFragmentBalance() != null ? user.getFragmentBalance() : 0;
+        List<String> puzzle = java.util.stream.IntStream.rangeClosed(1, fragmentCount)
+                .mapToObj(i -> "piece_" + i)
+                .toList();
 
         double profit = stats.totalPayout() - stats.totalWagered();
         RankDto rank = computeRank(profit);
@@ -275,6 +276,7 @@ public class MetaGameService {
             case "piece_7" -> "Фрагмент 7";
             case "piece_8" -> "Фрагмент 8";
             case "piece_9" -> "Фрагмент 9";
+            case "piece_10" -> "Фрагмент 10";
             default -> "Фрагмент";
         };
     }
@@ -345,9 +347,9 @@ public class MetaGameService {
         double activatedScore = boosterChosenCount > 0 ? (((double) boosterActivatedCount / boosterChosenCount) * 5.0) : 0.0;
         double boosters = Math.min(10.0, chosenScore + activatedScore);
 
-        // 3. Коллекционер (Collector): прогресс коллекции (до 7.0) + дропы за окно (до 3.0)
-        long totalPieces = userPuzzlePieceRepository.countByUserId(userId);
-        double collectionScore = (Math.min(9.0, (double) totalPieces) / 9.0) * 7.0;
+        // 3. Коллекционер (Collector): прогресс коллекции по текущему балансу фрагментов (до 7.0) + дропы за окно (до 3.0)
+        int currentFragments = user.getFragmentBalance() != null ? user.getFragmentBalance() : 0;
+        double collectionScore = (Math.min(10.0, (double) currentFragments) / 10.0) * 7.0;
         Instant oldestRoundTime = rounds.get(rounds.size() - 1).getCreatedAt();
         long recentDrops = oldestRoundTime != null
                 ? userPuzzlePieceRepository.countCollectedAfter(userId, oldestRoundTime)

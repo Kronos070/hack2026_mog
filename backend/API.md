@@ -52,9 +52,12 @@
 | `GET` | `/api/game/house-edge` | JWT | Текущий House Edge, RTP и EV игрока |
 | `POST` | `/api/game/house-edge/reset` | JWT | Сброс House Edge игрока к базовому значению `0.04` |
 | `POST` | `/api/game/top-up` | JWT | Быстрое пополнение баланса бонусов (алиас для игр) |
+| `GET` | `/api/game/boosters` | Нет | Получить доступные бустеры и их стоимость во фрагментах |
 | `GET` | `/api/admin/config` | JWT | Чтение текущей конфигурации игры (кэш в RAM, O(1)) |
 | `PUT` | `/api/admin/config` | ADMIN | Горячее сохранение конфигурации игры (Hot-Reload) |
 | `POST` | `/api/admin/config/reset` | ADMIN | Сброс конфигурации к эталонным дефолтным значениям |
+| `GET` | `/api/admin/boosters/pricing` | JWT | Чтение текущей стоимости бустеров во фрагментах |
+| `PUT` | `/api/admin/boosters/pricing` | ADMIN | Обновление стоимости бустеров во фрагментах |
 | `GET` | `/api/tournament` | Опц. | Полная турнирная таблица, призовые места топ-3 и таймер endsAt |
 | `GET` | `/api/tournament/leaderboard` | Нет | Компактный рейтинг участников лидерборда (`?limit=50`) |
 | `POST`| `/api/tournament/settle` | Нет | Финализация турнира, выплата призов топ-3 и сброс очков (`?force=true`) |
@@ -591,6 +594,19 @@
 - **Headers:** `Authorization: Bearer <jwt_token>`
 - **Ответ `200 OK`:** Объект `PlayerHouseEdgeResponse`.
 
+#### `GET /api/game/boosters`
+Получить каталог доступных бустеров и их стоимость во фрагментах.
+- **Auth:** Не требуется (публичный эндпоинт для клиента)
+- **Ответ `200 OK`:**
+```json
+[
+  { "tier": 1, "multiplier": 1.0, "costFragments": 0 },
+  { "tier": 2, "multiplier": 2.0, "costFragments": 2 },
+  { "tier": 3, "multiplier": 3.0, "costFragments": 4 },
+  { "tier": 4, "multiplier": 4.0, "costFragments": 6 }
+]
+```
+
 ---
 
 ### 3.6. Управление конфигурацией игры (Admin Config & Hot-Reload)
@@ -615,6 +631,7 @@
   "pointsCashoutBonus": 25,
   "pointsBoosterBonus": 50,
   "boosterTierValues": [1.0, 2.0, 3.0, 4.0],
+  "boosterCostFragments": [0, 2, 4, 6],
   "lootProbabilities": {
     "green": [0.0, 0.25, 0.20, 0.18, 0.15, 0.10, 0.07, 0.04, 0.01],
     "red": [0.0, 0.20, 0.18, 0.15, 0.13, 0.10, 0.08, 0.06, 0.04, 0.03, 0.02, 0.01]
@@ -638,6 +655,17 @@
 Сброс параметров игры к эталонным заводским настройкам (ТЗ §1.9).
 - **Headers:** `Authorization: Bearer <jwt_token>` (роль `ADMIN`)
 - **Ответ `200 OK`:** Сброшенный объект `GameConfigDto` с дефолтными значениями.
+
+#### `GET /api/admin/boosters/pricing`
+Получить текущую сетку стоимости бустеров во фрагментах.
+- **Headers:** `Authorization: Bearer <jwt_token>`
+- **Ответ `200 OK`:** Список объектов `BoosterTierPricingDto`.
+
+#### `PUT /api/admin/boosters/pricing`
+Обновить стоимость бустеров во фрагментах (применяется для всех последующих раундов).
+- **Headers:** `Authorization: Bearer <jwt_token>` (роль `ADMIN`, иначе `403 Forbidden`)
+- **Body:** Массив из 4 целых чисел `[costTier1, costTier2, costTier3, costTier4]`, например `[0, 2, 4, 6]`.
+- **Ответ `200 OK`:** Обновленный список `BoosterTierPricingDto`.
 
 ---
 

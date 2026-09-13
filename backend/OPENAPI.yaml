@@ -54,7 +54,21 @@ components:
           pattern: \S
         password:
           type: string
-          pattern: \S
+    BoosterTierPricingDto:
+      type: object
+      properties:
+        tier:
+          type: integer
+          format: int32
+          example: 2
+        multiplier:
+          type: number
+          format: double
+          example: 2.0
+        costFragments:
+          type: integer
+          format: int32
+          example: 2
     PageResponseUserProfileResponse:
       type: object
       properties:
@@ -290,6 +304,14 @@ components:
           items:
             type: number
             format: double
+        boosterCostFragments:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: integer
+            format: int32
+          description: Стоимость бустеров во фрагментах для тиров 1..4 (дефолт [0, 2, 4, 6])
         lootProbabilities:
           $ref: "#/components/schemas/LootProbabilitiesDto"
         minWinAmount:
@@ -541,6 +563,21 @@ paths:
                 $ref: "#/components/schemas/TopUpBalanceResponse"
       security:
       - jwtAuth: []
+  /api/game/boosters:
+    get:
+      summary: Получить доступные бустеры и их стоимость
+      description: Возвращает список доступных бустеров по тирам с множителями и стоимостью во фрагментах
+      tags:
+      - Game
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BoosterTierPricingDto"
   /api/ping:
     get:
       responses:
@@ -792,5 +829,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GameConfigDto"
+      security:
+      - jwtAuth: []
+  /api/admin/boosters/pricing:
+    get:
+      summary: Получить текущую сетку цен бустеров
+      description: Возвращает список тиров бустеров с множителями и стоимостью во фрагментах
+      tags:
+      - Admin Boosters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BoosterTierPricingDto"
+      security:
+      - jwtAuth: []
+    put:
+      summary: Обновить стоимость бустеров во фрагментах
+      description: Принимает массив из 4 целых чисел со стоимостью во фрагментах для тиров 1..4 (например [0, 2, 4, 6])
+      tags:
+      - Admin Boosters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BoosterTierPricingDto"
       security:
       - jwtAuth: []

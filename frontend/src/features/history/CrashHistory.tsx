@@ -1,5 +1,6 @@
 // Лента последних крашей: коэффициенты завершённых раундов в одну строку
 
+import { useEffect, useRef } from 'react';
 import type { HistoryEntry } from '@/shared/api/contract';
 import { cn } from '@/shared/lib/cn';
 
@@ -11,9 +12,27 @@ interface CrashHistoryProps {
 const HIGH_MULTIPLIER = 2;
 
 export function CrashHistory({ entries, limit = 6 }: CrashHistoryProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevFirstIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || entries.length === 0) return;
+    const currentFirstId = entries[0]?.roundId;
+    if (prevFirstIdRef.current && currentFirstId && currentFirstId !== prevFirstIdRef.current) {
+      if (container.scrollLeft > 0) {
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      }
+    }
+    prevFirstIdRef.current = currentFirstId ?? null;
+  }, [entries]);
+
   // Показывает коэффициенты краха, подсвечивая высокие множители
   return (
-    <div className="no-scrollbar flex h-[clamp(2rem,4vw,2.375rem)] w-full max-w-full gap-[clamp(0.375rem,1vw,0.625rem)] overflow-x-auto overflow-y-hidden">
+    <div
+      ref={containerRef}
+      className="no-scrollbar flex h-[clamp(2rem,4vw,2.375rem)] w-full max-w-full gap-[clamp(0.375rem,1vw,0.625rem)] overflow-x-auto overflow-y-hidden"
+    >
       {entries.slice(0, limit).map((entry) => (
         <span
           key={entry.roundId}

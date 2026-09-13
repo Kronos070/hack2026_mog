@@ -9,7 +9,7 @@ import { AppHeader } from '@/shared/ui/AppHeader';
 import { SkyDecor } from '@/features/home/SkyDecor';
 import { soundManager } from '@/shared/lib/sound-manager';
 
-const DEMO_PLAYER = { login: 'demo_player', password: 'admin123' };
+const DEMO_PLAYER = { login: 'test_user', password: 'test1234' };
 
 export function HomePage() {
   // Встречает игрока и ведёт в игру одним нажатием

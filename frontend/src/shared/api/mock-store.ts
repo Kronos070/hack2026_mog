@@ -99,7 +99,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-1',
     playerName: 'Алина',
-    theme: 'meadow',
+    theme: 'green',
     betCost: 100,
     crashMultiplier: 3.42,
     cashoutMultiplier: 3.1,
@@ -109,7 +109,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-2',
     playerName: 'Марк',
-    theme: 'ocean',
+    theme: 'red',
     betCost: 50,
     crashMultiplier: 1.65,
     cashoutMultiplier: 1.5,
@@ -119,7 +119,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-3',
     playerName: 'Соня',
-    theme: 'space',
+    theme: 'red',
     betCost: 200,
     crashMultiplier: 1.18,
     cashoutMultiplier: null,
@@ -129,7 +129,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-4',
     playerName: 'Тимур',
-    theme: 'meadow',
+    theme: 'green',
     betCost: 75,
     crashMultiplier: 4.85,
     cashoutMultiplier: 4.2,
@@ -139,7 +139,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-5',
     playerName: 'Вера',
-    theme: 'candy',
+    theme: 'green',
     betCost: 25,
     crashMultiplier: 1.05,
     cashoutMultiplier: null,
@@ -149,7 +149,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-6',
     playerName: 'Алина',
-    theme: 'space',
+    theme: 'red',
     betCost: 150,
     crashMultiplier: 6.2,
     cashoutMultiplier: 5.5,
@@ -159,7 +159,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-7',
     playerName: 'Марк',
-    theme: 'meadow',
+    theme: 'green',
     betCost: 100,
     crashMultiplier: 2.1,
     cashoutMultiplier: 1.8,
@@ -169,7 +169,7 @@ export const INITIAL_HISTORY: HistoryEntry[] = [
   {
     roundId: 'mock-hist-8',
     playerName: 'Соня',
-    theme: 'ocean',
+    theme: 'red',
     betCost: 50,
     crashMultiplier: 1.35,
     cashoutMultiplier: null,

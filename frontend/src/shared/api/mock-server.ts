@@ -138,7 +138,7 @@ export function ensureBotHistorySimulation(): void {
         draft.history.unshift({
           roundId: `bot-round-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           playerName: bot.name,
-          theme: 'meadow',
+          theme: 'green',
           betCost,
           crashMultiplier: mult,
           cashoutMultiplier: cashoutMult,

@@ -6,10 +6,16 @@ import { Toaster } from 'sonner';
 import { AppRoutes } from '@/app/routes';
 import { AchievementToast } from '@/features/profile/AchievementToast';
 import { soundManager } from '@/shared/lib/sound-manager';
+import { useTournamentStreams } from '@/shared/api/use-tournament-streams';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5000, refetchOnWindowFocus: false } },
 });
+
+function TournamentStreams() {
+  useTournamentStreams();
+  return null;
+}
 
 export function App() {
   // Инициализирует звук и оборачивает приложение в провайдеры
@@ -19,6 +25,7 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <TournamentStreams />
       <BrowserRouter>
         <AppRoutes />
         <AchievementToast />
@@ -27,3 +34,4 @@ export function App() {
     </QueryClientProvider>
   );
 }
+

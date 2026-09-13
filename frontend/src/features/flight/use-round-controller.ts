@@ -63,16 +63,26 @@ export function useRoundController() {
     (message: SocketMessage) => {
       const active = useRoundStore.getState().round;
       if (!active) return;
-      finishRound(buildRoundResult(active, message, cashoutRef.current));
+      const roundResult = buildRoundResult(active, message, cashoutRef.current);
+      finishRound(roundResult);
+      if (roundResult.unlockedAchievements.length > 0) {
+        pushAchievements(roundResult.unlockedAchievements);
+      }
       void refreshUser();
       void queryClient.invalidateQueries({ queryKey: ['history'] });
     },
-    [finishRound, refreshUser, queryClient],
+    [finishRound, refreshUser, queryClient, pushAchievements],
   );
 
-  const handleSocketCashout = useCallback((message: SocketMessage) => {
-    if (typeof message.multiplier === 'number') cashoutRef.current = message.multiplier;
-  }, []);
+  const handleSocketCashout = useCallback(
+    (message: SocketMessage) => {
+      if (typeof message.multiplier === 'number') cashoutRef.current = message.multiplier;
+      if (message.unlockedAchievements && message.unlockedAchievements.length > 0) {
+        pushAchievements(message.unlockedAchievements);
+      }
+    },
+    [pushAchievements],
+  );
 
   const localFlight = useFlightEngine(api.isMock ? round : null, config, {
     onLevel: handleLevel,

@@ -6,17 +6,27 @@ import type {
   GameConfig,
   HistoryEntry,
   LeaderboardEntry,
+  PlayerHouseEdge,
   Profile,
   RoundResult,
   RoundStart,
+  StatRadar,
+  TopUpResponse,
   Tournament,
+  TournamentHistoryItem,
+  TournamentSettlement,
   User,
 } from '@/shared/api/contract';
 import {
   gameConfigSchema,
   leaderboardEntrySchema,
+  playerHouseEdgeSchema,
   profileSchema,
+  statRadarSchema,
+  topUpResponseSchema,
+  tournamentHistoryItemSchema,
   tournamentSchema,
+  tournamentSettlementSchema,
 } from '@/shared/api/contract';
 import {
   authResponseSchema,
@@ -125,19 +135,13 @@ export const api = {
   async getProfile(playerId?: string): Promise<Profile> {
     if (USE_MOCK) return mock.mockGetProfile(playerId);
     const { data } = await http.get(playerId ? `/users/${playerId}` : '/users/me');
-    const user = toUser(backendUserSchema.parse(data));
-    return profileSchema.parse({ ...mock.mockGetProfile(), user });
+    return profileSchema.parse(data);
   },
 
   async getConfig(): Promise<GameConfig> {
     if (USE_MOCK) return gameConfigSchema.parse(mock.mockGetConfig());
-    try {
-      const { data } = await http.get('/admin/config');
-      return gameConfigSchema.parse(data);
-    } catch {
-      // Бэкенд без этого эндпоинта — играем на локальных настройках
-      return gameConfigSchema.parse(mock.mockGetConfig());
-    }
+    const { data } = await http.get('/admin/config');
+    return gameConfigSchema.parse(data);
   },
 
   async saveConfig(config: GameConfig): Promise<GameConfig> {
@@ -148,21 +152,124 @@ export const api = {
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
     if (USE_MOCK) return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
-    try {
-      const { data } = await http.get('/tournament/leaderboard', { params: { limit: 50 } });
-      return leaderboardEntrySchema.array().parse(data);
-    } catch {
-      return leaderboardEntrySchema.array().parse(mock.mockGetLeaderboard());
-    }
+    const { data } = await http.get('/tournament/leaderboard', { params: { limit: 50 } });
+    return leaderboardEntrySchema.array().parse(data);
   },
 
   async getTournament(): Promise<Tournament> {
     if (USE_MOCK) return tournamentSchema.parse(mock.mockGetTournament());
-    try {
-      const { data } = await http.get('/tournament');
-      return tournamentSchema.parse(data);
-    } catch {
-      return tournamentSchema.parse(mock.mockGetTournament());
+    const { data } = await http.get('/tournament');
+    return tournamentSchema.parse(data);
+  },
+
+  // =========================================================================
+  // Эндпоинты бэкенда без прямого UI (интегрированы согласно контрактам)
+  // =========================================================================
+
+  /**
+   * TODO: [UI отсутствует] Получение полигона характеристик (шестиугольник Dota 2: 6 осей за 30 игр).
+   * Зачем нужна: визуализация стиля игры (выдержка, бустеры, коллекционер, щедрость, винрейт, риск).
+   * Эндпоинты бэкенда: GET /api/users/me/radar-stats (свой) или GET /api/users/{id}/radar-stats (публичный).
+   */
+  async getRadarStats(playerId?: string): Promise<StatRadar> {
+    if (USE_MOCK) {
+      return {
+        patience: 5.0,
+        boosters: 5.0,
+        collector: 5.0,
+        generosity: 5.0,
+        winRate: 5.0,
+        risk: 5.0,
+        gamesAnalyzed: 0,
+        totalGames: 0,
+        nextRecalcIn: 10,
+      };
     }
+    const { data } = await http.get(playerId ? `/users/${playerId}/radar-stats` : '/users/me/radar-stats');
+    return statRadarSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Сброс параметров игры к эталонным заводским настройкам (ТЗ §1.9).
+   * Зачем нужна: админская функция отката баланса игры без ручного ввода всех полей.
+   * Эндпоинт бэкенда: POST /api/admin/config/reset (требует роль ADMIN).
+   */
+  async resetConfig(): Promise<GameConfig> {
+    if (USE_MOCK) return gameConfigSchema.parse(mock.mockGetConfig());
+    const { data } = await http.post('/admin/config/reset');
+    return gameConfigSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Быстрое пополнение баланса бонусов для тестирования.
+   * Зачем нужна: проверка игрового цикла и ставок при нехватке средств без ограничений.
+   * Эндпоинты бэкенда: POST /api/users/me/top-up или POST /api/users/{id}/top-up.
+   */
+  async topUpBalance(amount = 1000, playerId?: string): Promise<TopUpResponse> {
+    if (USE_MOCK) {
+      return { userId: 1, username: 'player', addedAmount: amount, newBalance: 10000 };
+    }
+    const url = playerId ? `/users/${playerId}/top-up` : '/users/me/top-up';
+    const { data } = await http.post(url, { amount });
+    return topUpResponseSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Просмотр персонального House Edge, RTP и EV игрока.
+   * Зачем нужна: проверка адаптивной математической модели казино Столото и динамического House Edge.
+   * Эндпоинт бэкенда: GET /api/game/house-edge.
+   */
+  async getHouseEdge(): Promise<PlayerHouseEdge> {
+    if (USE_MOCK) {
+      return { userId: 1, currentHouseEdge: 0.04, rtp: 0.96, expectedValue: -0.04, lastBetAmount: null };
+    }
+    const { data } = await http.get('/game/house-edge');
+    return playerHouseEdgeSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Сброс персонального House Edge игрока к базовому значению 0.04.
+   * Зачем нужна: очистка персональной истории динамического RTP для воспроизводимого тестирования.
+   * Эндпоинт бэкенда: POST /api/game/house-edge/reset.
+   */
+  async resetHouseEdge(): Promise<PlayerHouseEdge> {
+    if (USE_MOCK) {
+      return { userId: 1, currentHouseEdge: 0.04, rtp: 0.96, expectedValue: -0.04, lastBetAmount: null };
+    }
+    const { data } = await http.post('/game/house-edge/reset');
+    return playerHouseEdgeSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Принудительная финализация турнира и начисление наград топ-3.
+   * Зачем нужна: тестирование подведения итогов турнира, начисления призов и сброса таблицы.
+   * Эндпоинт бэкенда: POST /api/tournament/settle?force=true.
+   */
+  async settleTournament(force = false): Promise<TournamentSettlement> {
+    if (USE_MOCK) {
+      return {
+        status: 'SUCCESS',
+        tournamentTitle: 'Гран-при Воздухоплавателей',
+        settledAt: Date.now(),
+        rewardedPlayersCount: 0,
+        totalPrizesAwarded: 0,
+        winners: [],
+        message: 'Демо-турнир финализирован',
+      };
+    }
+    const { data } = await http.post('/tournament/settle', null, { params: { force } });
+    return tournamentSettlementSchema.parse(data);
+  },
+
+  /**
+   * TODO: [UI отсутствует] Получение архива завершенных турниров и начисленных призов.
+   * Зачем нужна: аудит призовых мест и просмотр истории выигрышей в турнирах.
+   * Эндпоинт бэкенда: GET /api/tournament/history?my=false&limit=20.
+   */
+  async getTournamentHistory(my = false, limit = 20): Promise<TournamentHistoryItem[]> {
+    if (USE_MOCK) return [];
+    const { data } = await http.get('/tournament/history', { params: { my, limit } });
+    const rows = Array.isArray(data) ? data : [];
+    return tournamentHistoryItemSchema.array().parse(rows);
   },
 };

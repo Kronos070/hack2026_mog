@@ -166,6 +166,52 @@ export const gameConfigSchema = z.object({
   popupTimeout: z.number().positive(),
 });
 
+export const statRadarSchema = z.object({
+  patience: z.number().min(0).max(10),
+  boosters: z.number().min(0).max(10),
+  collector: z.number().min(0).max(10),
+  generosity: z.number().min(0).max(10),
+  winRate: z.number().min(0).max(10),
+  risk: z.number().min(0).max(10),
+  gamesAnalyzed: z.number().int().nonnegative(),
+  totalGames: z.number().int().nonnegative(),
+  nextRecalcIn: z.number().int().nonnegative(),
+});
+
+export const playerHouseEdgeSchema = z.object({
+  userId: z.number(),
+  currentHouseEdge: z.number(),
+  rtp: z.number(),
+  expectedValue: z.number(),
+  lastBetAmount: z.number().nullable(),
+});
+
+export const topUpResponseSchema = z.object({
+  userId: z.number(),
+  username: z.string(),
+  addedAmount: z.number(),
+  newBalance: z.number(),
+});
+
+export const tournamentHistoryItemSchema = z.object({
+  place: z.number().int().positive(),
+  playerId: z.string(),
+  playerName: z.string(),
+  score: z.number().nonnegative(),
+  prizeAwarded: z.number().nonnegative(),
+  awardedAt: z.string(),
+});
+
+export const tournamentSettlementSchema = z.object({
+  status: z.string(),
+  tournamentTitle: z.string(),
+  settledAt: z.number(),
+  rewardedPlayersCount: z.number().int().nonnegative(),
+  totalPrizesAwarded: z.number().nonnegative(),
+  winners: z.array(tournamentHistoryItemSchema),
+  message: z.string(),
+});
+
 export type Theme = z.infer<typeof themeSchema>;
 export type Role = z.infer<typeof roleSchema>;
 export type User = z.infer<typeof userSchema>;
@@ -184,3 +230,9 @@ export type Achievement = z.infer<typeof achievementSchema>;
 export type Rank = z.infer<typeof rankSchema>;
 export type TournamentEntry = z.infer<typeof tournamentEntrySchema>;
 export type Tournament = z.infer<typeof tournamentSchema>;
+export type StatRadar = z.infer<typeof statRadarSchema>;
+export type PlayerHouseEdge = z.infer<typeof playerHouseEdgeSchema>;
+export type TopUpResponse = z.infer<typeof topUpResponseSchema>;
+export type TournamentHistoryItem = z.infer<typeof tournamentHistoryItemSchema>;
+export type TournamentSettlement = z.infer<typeof tournamentSettlementSchema>;
+

@@ -39,7 +39,6 @@ export function useFlightEngine(
   const handlers = useRef(callbacks);
   handlers.current = callbacks;
 
-  const lastMultiplier = useRef(1);
   const markCashout = useCallback(() => {
     cashedOut.current = true;
     soundManager.stopFlightSound();
@@ -60,7 +59,6 @@ export function useFlightEngine(
     };
     cashedOut.current = false;
     boosterFactor.current = 1;
-    lastMultiplier.current = 1;
     soundManager.startFlightSound();
 
     const tick = (): void => {
@@ -71,20 +69,15 @@ export function useFlightEngine(
       const base = multiplierAt(elapsed, config);
       const current = base * boosterFactor.current;
 
-      const currentFloor = Math.floor(current);
-      if (currentFloor > lastMultiplier.current) {
-        const nextTarget =
-          currentFloor - lastMultiplier.current > 1
-            ? currentFloor
-            : lastMultiplier.current + 1;
-        soundManager.playMultiplier(nextTarget);
-        lastMultiplier.current = currentFloor;
-      }
-
       const passed = levelsPassedAt(current, round.levelMultipliers);
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
+
+          // Звуки x2, x3, x4... воспроизводятся при пересечении линий игрового поля
+          if (level >= 2 && (passed - state.levelsPassed <= 1 || level === passed)) {
+            soundManager.playMultiplier(level);
+          }
 
           if (
             round.boosterLevel === level &&

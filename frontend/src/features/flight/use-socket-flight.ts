@@ -53,7 +53,6 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     let hasReceivedServerTick = false;
     let animationFrameId = 0;
     let isFinished = false;
-    let lastMultiplier = 1;
     const clientStartTime = performance.now();
     soundManager.startFlightSound();
 
@@ -87,19 +86,16 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       state.multiplier = displayMultiplier;
       state.baseMultiplier = baseMultiplier;
 
-      const currentFloor = Math.floor(displayMultiplier);
-      if (currentFloor > lastMultiplier) {
-        const nextTarget =
-          currentFloor - lastMultiplier > 1 ? currentFloor : lastMultiplier + 1;
-        soundManager.playMultiplier(nextTarget);
-        lastMultiplier = currentFloor;
-      }
-
       // Проверка прохождения уровней (по актуальному множителю полета шара)
       const passed = levelsPassedAt(displayMultiplier, round.levelMultipliers);
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
+
+          // Звуки x2, x3, x4... воспроизводятся при пересечении линий игрового поля
+          if (level >= 2 && (passed - state.levelsPassed <= 1 || level === passed)) {
+            soundManager.playMultiplier(level);
+          }
         }
         state.levelsPassed = passed;
       }

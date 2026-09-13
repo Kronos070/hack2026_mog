@@ -44,6 +44,22 @@ services:
     networks:
       - mog-network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_API_MODE: ${VITE_API_MODE:-real}
+    container_name: mog-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - mog-network
+
   caddy:
     image: ${CADDY_IMAGE:-caddy:2-alpine}
     container_name: mog-caddy
@@ -60,6 +76,7 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
+      - frontend
     networks:
       - mog-network
 

@@ -36,6 +36,11 @@ export interface SocketMessage {
 }
 
 function socketUrl(): string {
+  if (API_URL.startsWith('/')) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const base = API_URL.replace(/\/api\/?$/, '');
+    return `${proto}//${window.location.host}${base}/ws/game?token=${encodeURIComponent(readToken() ?? '')}`;
+  }
   const base = API_URL.replace(/\/api\/?$/, '');
   const wsBase = base.replace(/^http/, 'ws');
   return `${wsBase}/ws/game?token=${encodeURIComponent(readToken() ?? '')}`;

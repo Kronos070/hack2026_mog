@@ -140,7 +140,7 @@ export class SceneRenderer {
       const beyond = index >= count;
       const value = beyond ? last * Math.pow(ratio, index - count + 1) : (levels[index] ?? 1);
       const passed = beyond
-        ? (snapshot?.baseMultiplier ?? 0) >= value
+        ? (snapshot?.multiplier ?? 0) >= value
         : (snapshot?.levelsPassed ?? 0) > index;
 
       if (sparse) {

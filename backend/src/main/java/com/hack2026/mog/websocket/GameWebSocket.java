@@ -50,6 +50,11 @@ public class GameWebSocket {
      */
     private final Map<Long, WebSocketConnection> userConnections = new ConcurrentHashMap<>();
 
+    /**
+     * Предотвращение дублирующих потоков стриминга для одного раунда
+     */
+    private final Map<UUID, Boolean> activeFlightStreams = new ConcurrentHashMap<>();
+
     @OnOpen
     public void onOpen(WebSocketConnection connection) {
         String query = connection.handshakeRequest().query();
@@ -74,8 +79,13 @@ public class GameWebSocket {
             sendJson(connection, WsGameMessage.connected(userId, username));
 
             ActiveGameRound activeRound = gameService.getActiveRounds().get(userId);
-            if (activeRound != null && !activeRound.isExpiredAt(Instant.now())) {
-                startFlightStream(userId, activeRound);
+            if (activeRound != null) {
+                if (!activeRound.isExpiredAt(Instant.now())) {
+                    startFlightStream(userId, activeRound);
+                } else {
+                    LOG.infof("Active round %s already reached crash time for user %d upon connection. Sending crash result immediately.", activeRound.roundId(), userId);
+                    handleCrashResolutionAndSend(connection, activeRound, activeRound.isBoosterActivated());
+                }
             }
         } catch (Exception e) {
             LOG.warnf("WebSocket connection authentication failed: %s", e.getMessage());
@@ -88,7 +98,7 @@ public class GameWebSocket {
     public void onClose(WebSocketConnection connection) {
         Long userId = connection.userData().get(USER_ID_KEY);
         if (userId != null) {
-            userConnections.remove(userId);
+            userConnections.remove(userId, connection);
             LOG.infof("User disconnected from WebSocket: id=%d", userId);
         }
     }
@@ -115,100 +125,136 @@ public class GameWebSocket {
             return;
         }
 
+        UUID roundId = activeRound.roundId();
+        if (activeFlightStreams.putIfAbsent(roundId, Boolean.TRUE) != null) {
+            LOG.debugf("Flight stream already active for round %s, skipping duplicate thread", roundId);
+            return;
+        }
+
         Thread.ofVirtual().name("ws-flight-" + userId).start(() -> {
-            WebSocketConnection conn = userConnections.get(userId);
-            if (conn == null || conn.isClosed()) {
-                return;
-            }
+            try {
+                Instant startTime = activeRound.startTime();
+                Instant crashTime = activeRound.crashTime();
+                double baseCrashMultiplier = activeRound.crashMultiplier();
 
-            UUID roundId = activeRound.roundId();
-            Instant startTime = activeRound.startTime();
-            Instant crashTime = activeRound.crashTime();
-            double baseCrashMultiplier = activeRound.crashMultiplier();
+                boolean hasBooster = activeRound.hasBooster();
+                int boosterMultiplier = activeRound.boosterMultiplier();
+                int boosterLevel = activeRound.boosterLevel() != null ? activeRound.boosterLevel() : 1;
+                double boosterThreshold = activeRound.boosterThreshold() != null ? activeRound.boosterThreshold() : Double.MAX_VALUE;
 
-            boolean hasBooster = activeRound.hasBooster();
-            int boosterMultiplier = activeRound.boosterMultiplier();
-            int boosterLevel = activeRound.boosterLevel() != null ? activeRound.boosterLevel() : 1;
-            double boosterThreshold = activeRound.boosterThreshold() != null ? activeRound.boosterThreshold() : Double.MAX_VALUE;
+                boolean boosterActivated = activeRound.isBoosterActivated();
 
-            boolean boosterActivated = activeRound.isBoosterActivated();
+                while (true) {
+                    Instant now = Instant.now();
 
-            while (conn.isOpen()) {
-                Instant now = Instant.now();
-
-                if (now.isAfter(crashTime) || now.equals(crashTime)) {
-                    // Точка краха достигнута
-                    long totalElapsed = Math.max(0, Duration.between(startTime, crashTime).toMillis());
-                    double finalCrashMultiplier = (boosterActivated || activeRound.isBoosterActivated())
-                            ? CrashGenerator.floorTo2Decimals(baseCrashMultiplier * boosterMultiplier)
-                            : baseCrashMultiplier;
-
-                    GameRoundCashoutResult crashResolution = null;
-                    if (!activeRound.isCashedOut()) {
-                        crashResolution = gameService.resolveCrash(activeRound, crashTime);
+                    if (now.isAfter(crashTime) || now.equals(crashTime)) {
+                        // Точка краха достигнута
+                        WebSocketConnection conn = userConnections.get(userId);
+                        handleCrashResolutionAndSend(conn, activeRound, boosterActivated);
+                        break;
                     }
 
-                    int pointsEarned = crashResolution != null && crashResolution.pointsEarned() != null
-                            ? crashResolution.pointsEarned()
-                            : 0;
-                    int passedLevels = crashResolution != null && crashResolution.levelsPassed() != null
-                            ? crashResolution.levelsPassed()
-                            : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
-                    boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
-                    Long newBalance = crashResolution != null ? crashResolution.newBalance() : null;
-                    com.hack2026.mog.dto.meta.RewardDto reward = crashResolution != null ? crashResolution.reward() : null;
-                    java.util.List<com.hack2026.mog.dto.meta.AchievementDto> unlockedAchievements = crashResolution != null && crashResolution.unlockedAchievements() != null
-                            ? crashResolution.unlockedAchievements()
-                            : java.util.List.of();
-                    sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance, reward, unlockedAchievements));
-                    break;
-                }
+                    WebSocketConnection conn = userConnections.get(userId);
+                    if (conn == null || conn.isClosed()) {
+                        try {
+                            Thread.sleep(TICK_INTERVAL_MS * 2);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            if (Instant.now().isAfter(crashTime) || Instant.now().equals(crashTime)) {
+                                handleCrashResolutionAndSend(null, activeRound, boosterActivated);
+                            }
+                            break;
+                        }
+                        continue;
+                    }
 
-                // Текущий базовый множитель по экспоненциальной формуле с динамическим growthRate
-                double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, activeRound.growthRate());
-                double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
+                    // Текущий базовый множитель по экспоненциальной формуле с динамическим growthRate
+                    double rawBaseMultiplier = GameService.calculateMultiplierAt(startTime, now, activeRound.growthRate());
+                    double baseMultiplier = CrashGenerator.floorTo2Decimals(rawBaseMultiplier);
 
-                // Проверка достижения уровня бустера
-                if (!boosterActivated && hasBooster && baseMultiplier >= boosterThreshold) {
-                    // По CASE.md бустер не активируется, если шар долетел до него уже после нажатия «Забрать»
-                    if (!activeRound.isCashedOut()) {
-                        if (activeRound.markBoosterActivated()) {
-                            boosterActivated = true;
-                            double previousMultiplier = baseMultiplier;
-                            double currentMultiplier = CrashGenerator.floorTo2Decimals(previousMultiplier * boosterMultiplier);
-                            int bonusPoints = activeRound.pointsBoosterBonus();
+                    // Проверка достижения уровня бустера
+                    if (!boosterActivated && hasBooster && baseMultiplier >= boosterThreshold) {
+                        // По CASE.md бустер не активируется, если шар долетел до него уже после нажатия «Забрать»
+                        if (!activeRound.isCashedOut()) {
+                            if (activeRound.markBoosterActivated()) {
+                                boosterActivated = true;
+                                double previousMultiplier = baseMultiplier;
+                                double currentMultiplier = CrashGenerator.floorTo2Decimals(previousMultiplier * boosterMultiplier);
+                                int bonusPoints = activeRound.pointsBoosterBonus();
 
-                            LOG.infof("Booster activated for user %d: level=%d, mult=x%d, prev=%.2f, curr=%.2f, points=%d",
-                                    userId, boosterLevel, boosterMultiplier, previousMultiplier, currentMultiplier, bonusPoints);
+                                LOG.infof("Booster activated for user %d: level=%d, mult=x%d, prev=%.2f, curr=%.2f, points=%d",
+                                        userId, boosterLevel, boosterMultiplier, previousMultiplier, currentMultiplier, bonusPoints);
 
-                            // Рассылка события BOOSTER_ACTIVATED в WebSocket
-                            sendJson(conn, WsGameMessage.boosterActivated(
-                                    boosterLevel,
-                                    boosterMultiplier,
-                                    previousMultiplier,
-                                    currentMultiplier,
-                                    bonusPoints
-                            ));
+                                // Рассылка события BOOSTER_ACTIVATED в WebSocket
+                                sendJson(conn, WsGameMessage.boosterActivated(
+                                        boosterLevel,
+                                        boosterMultiplier,
+                                        previousMultiplier,
+                                        currentMultiplier,
+                                        bonusPoints
+                                ));
+                            }
                         }
                     }
+
+                    // Если бустер активен — отображаем увеличенный множитель
+                    double displayMultiplier = (boosterActivated || activeRound.isBoosterActivated())
+                            ? CrashGenerator.floorTo2Decimals(baseMultiplier * boosterMultiplier)
+                            : baseMultiplier;
+
+                    long elapsedMs = Math.max(0, Duration.between(startTime, now).toMillis());
+                    sendJson(conn, WsGameMessage.tick(roundId, displayMultiplier, elapsedMs));
+
+                    try {
+                        Thread.sleep(TICK_INTERVAL_MS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
-
-                // Если бустер активен — отображаем увеличенный множитель
-                double displayMultiplier = (boosterActivated || activeRound.isBoosterActivated())
-                        ? CrashGenerator.floorTo2Decimals(baseMultiplier * boosterMultiplier)
-                        : baseMultiplier;
-
-                long elapsedMs = Math.max(0, Duration.between(startTime, now).toMillis());
-                sendJson(conn, WsGameMessage.tick(roundId, displayMultiplier, elapsedMs));
-
-                try {
-                    Thread.sleep(TICK_INTERVAL_MS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+            } finally {
+                activeFlightStreams.remove(roundId);
             }
         });
+    }
+
+    /**
+     * Разрешение краха раунда и отправка CRASHED сообщения подключенному клиенту.
+     */
+    private void handleCrashResolutionAndSend(WebSocketConnection conn, ActiveGameRound activeRound, boolean boosterActivated) {
+        UUID roundId = activeRound.roundId();
+        Instant startTime = activeRound.startTime();
+        Instant crashTime = activeRound.crashTime();
+        double baseCrashMultiplier = activeRound.crashMultiplier();
+        int boosterMultiplier = activeRound.boosterMultiplier();
+
+        long totalElapsed = Math.max(0, Duration.between(startTime, crashTime).toMillis());
+        double finalCrashMultiplier = (boosterActivated || activeRound.isBoosterActivated())
+                ? CrashGenerator.floorTo2Decimals(baseCrashMultiplier * boosterMultiplier)
+                : baseCrashMultiplier;
+
+        GameRoundCashoutResult crashResolution = null;
+        if (!activeRound.isCashedOut()) {
+            crashResolution = gameService.resolveCrash(activeRound, crashTime);
+        }
+
+        if (conn == null || conn.isClosed()) {
+            return;
+        }
+
+        int pointsEarned = crashResolution != null && crashResolution.pointsEarned() != null
+                ? crashResolution.pointsEarned()
+                : 0;
+        int passedLevels = crashResolution != null && crashResolution.levelsPassed() != null
+                ? crashResolution.levelsPassed()
+                : GameLevelConfig.calculatePassedLevels(activeRound.theme(), baseCrashMultiplier);
+        boolean wasBooster = boosterActivated || activeRound.isBoosterActivated();
+        Long newBalance = crashResolution != null ? crashResolution.newBalance() : null;
+        com.hack2026.mog.dto.meta.RewardDto reward = crashResolution != null ? crashResolution.reward() : null;
+        java.util.List<com.hack2026.mog.dto.meta.AchievementDto> unlockedAchievements = crashResolution != null && crashResolution.unlockedAchievements() != null
+                ? crashResolution.unlockedAchievements()
+                : java.util.List.of();
+        sendJson(conn, WsGameMessage.crashed(roundId, finalCrashMultiplier, totalElapsed, pointsEarned, passedLevels, wasBooster, newBalance, reward, unlockedAchievements));
     }
 
     /**

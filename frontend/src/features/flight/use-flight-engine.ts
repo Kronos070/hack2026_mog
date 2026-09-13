@@ -71,11 +71,13 @@ export function useFlightEngine(
       const base = multiplierAt(elapsed, config);
       const current = base * boosterFactor.current;
 
-      const passed = levelsPassedAt(base, round.levelMultipliers);
+      const passed = levelsPassedAt(current, round.levelMultipliers);
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
-          soundManager.play('level-up', 0.5);
+          if (!state.boosterActivated || passed - state.levelsPassed <= 1) {
+            soundManager.play('level-up', 0.5);
+          }
 
           if (
             round.boosterLevel === level &&
@@ -93,13 +95,13 @@ export function useFlightEngine(
 
       state.multiplier = current;
       state.baseMultiplier = base;
-      state.progress = progressInLevels(base, round.levelMultipliers);
+      state.progress = progressInLevels(current, round.levelMultipliers);
 
       if (base >= round.crashMultiplier) {
         state.crashed = true;
         state.multiplier = round.crashMultiplier * boosterFactor.current;
         state.baseMultiplier = round.crashMultiplier;
-        state.progress = progressInLevels(round.crashMultiplier, round.levelMultipliers);
+        state.progress = progressInLevels(state.multiplier, round.levelMultipliers);
         handlers.current.onCrash();
         soundManager.play('crash', 0.8);
         return;

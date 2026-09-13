@@ -31,7 +31,7 @@ export function BetPanel({
   return (
     <div className="grid gap-[clamp(0.5rem,1.4vw,1.25rem)] min-[380px]:grid-cols-2 lg:grid-cols-1 lg:grid-rows-[minmax(min-content,1fr)_minmax(min-content,1fr)]">
       <GlassPanel
-        title={`Бустер · ${fragmentBalance} 🧩`}
+        title="Бустер"
         className={cn(
           'flex flex-col justify-center transition-opacity',
           locked && 'pointer-events-none opacity-60',

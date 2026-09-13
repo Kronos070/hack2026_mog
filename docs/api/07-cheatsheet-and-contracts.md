@@ -359,8 +359,8 @@ export interface ErrorResponse {
 | `GET` | `/api/users/{id}` | Нет | [01. Аутентификация](./01-auth-and-users.md) | Публичный профиль игрока по ID |
 | `GET` | `/api/users/{id}/radar-stats`| Нет | [04. Мета-игра](./04-meta-game.md) | Публичный шестиугольник игрока |
 | `GET` | `/api/users` | Нет | [01. Аутентификация](./01-auth-and-users.md) | Пагинированный список игроков |
-| `POST` | `/api/users/me/top-up` | JWT | [01. Аутентификация](./01-auth-and-users.md) | Быстрое пополнение баланса бонусов |
-| `POST` | `/api/users/{id}/top-up` | Нет | [01. Аутентификация](./01-auth-and-users.md) | Тестовое пополнение любого игрока |
+| `POST` | `/api/top-up` | JWT | [01. Аутентификация](./01-auth-and-users.md) | Быстрое пополнение баланса (алиасы: `/api/game/top-up`, `/api/users/me/top-up`) |
+| `POST` | `/api/users/{id}/top-up` | Нет | [01. Аутентификация](./01-auth-and-users.md) | Тестовое пополнение любого игрока по ID |
 | `GET` | `/api/game/boosters` | Нет | [02. Игровой цикл](./02-game-flow.md) | Каталог бустеров и стоимость во фрагментах |
 | `POST` | `/api/game/start` | JWT | [02. Игровой цикл](./02-game-flow.md) | Старт раунда полета (списание ставки и фрагментов) |
 | `POST` | `/api/game/cashout` | JWT | [02. Игровой цикл](./02-game-flow.md) | Забрать выигрыш (Cashout) |

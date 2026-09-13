@@ -95,6 +95,89 @@ const BOTS: LeaderboardEntry[] = BOT_PROFILES.map((bot) => ({
   points: bot.points,
 }));
 
+export const INITIAL_HISTORY: HistoryEntry[] = [
+  {
+    roundId: 'mock-hist-1',
+    playerName: 'Алина',
+    theme: 'meadow',
+    betCost: 100,
+    crashMultiplier: 3.42,
+    cashoutMultiplier: 3.1,
+    payout: 310,
+    finishedAt: Date.now() - 60000,
+  },
+  {
+    roundId: 'mock-hist-2',
+    playerName: 'Марк',
+    theme: 'ocean',
+    betCost: 50,
+    crashMultiplier: 1.65,
+    cashoutMultiplier: 1.5,
+    payout: 75,
+    finishedAt: Date.now() - 130000,
+  },
+  {
+    roundId: 'mock-hist-3',
+    playerName: 'Соня',
+    theme: 'space',
+    betCost: 200,
+    crashMultiplier: 1.18,
+    cashoutMultiplier: null,
+    payout: 0,
+    finishedAt: Date.now() - 210000,
+  },
+  {
+    roundId: 'mock-hist-4',
+    playerName: 'Тимур',
+    theme: 'meadow',
+    betCost: 75,
+    crashMultiplier: 4.85,
+    cashoutMultiplier: 4.2,
+    payout: 315,
+    finishedAt: Date.now() - 300000,
+  },
+  {
+    roundId: 'mock-hist-5',
+    playerName: 'Вера',
+    theme: 'candy',
+    betCost: 25,
+    crashMultiplier: 1.05,
+    cashoutMultiplier: null,
+    payout: 0,
+    finishedAt: Date.now() - 420000,
+  },
+  {
+    roundId: 'mock-hist-6',
+    playerName: 'Алина',
+    theme: 'space',
+    betCost: 150,
+    crashMultiplier: 6.2,
+    cashoutMultiplier: 5.5,
+    payout: 825,
+    finishedAt: Date.now() - 540000,
+  },
+  {
+    roundId: 'mock-hist-7',
+    playerName: 'Марк',
+    theme: 'meadow',
+    betCost: 100,
+    crashMultiplier: 2.1,
+    cashoutMultiplier: 1.8,
+    payout: 180,
+    finishedAt: Date.now() - 680000,
+  },
+  {
+    roundId: 'mock-hist-8',
+    playerName: 'Соня',
+    theme: 'ocean',
+    betCost: 50,
+    crashMultiplier: 1.35,
+    cashoutMultiplier: null,
+    payout: 0,
+    finishedAt: Date.now() - 800000,
+  },
+];
+
 function createInitialState(): MockState {
   return {
     users: {
@@ -103,7 +186,7 @@ function createInitialState(): MockState {
     },
     currentUserId: null,
     config: DEFAULT_CONFIG,
-    history: [],
+    history: INITIAL_HISTORY,
     leaderboard: BOTS,
     puzzle: [],
     upsellShown: false,
@@ -117,7 +200,11 @@ export function readState(): MockState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createInitialState();
     const parsed = JSON.parse(raw) as Partial<MockState>;
-    return { ...createInitialState(), ...parsed };
+    const state = { ...createInitialState(), ...parsed };
+    if (!state.history || state.history.length === 0) {
+      state.history = INITIAL_HISTORY;
+    }
+    return state;
   } catch {
     return createInitialState();
   }

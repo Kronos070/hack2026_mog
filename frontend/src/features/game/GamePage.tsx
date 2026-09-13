@@ -21,8 +21,17 @@ import { FlightOverlay } from '@/features/flight/FlightOverlay';
 import { ResultModal } from '@/features/results/ResultModal';
 
 export function GamePage() {
-  // Управляет всеми фазами раунда в пределах одного экрана
-  const { user, theme, betCost, boosterTier, lastBet, setBet, rememberBet } = useSessionStore();
+  const {
+    user,
+    theme,
+    betCost,
+    boosterTier,
+    lastBet,
+    autoCashout2x,
+    setBet,
+    rememberBet,
+    toggleAutoCashout2x,
+  } = useSessionStore();
   const historyRef = useSnapRows<HTMLDivElement>();
 
   const controller = useRoundController();
@@ -33,6 +42,28 @@ export function GamePage() {
     queryFn: () => api.getHistory(),
     refetchInterval: 3000,
   });
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => api.getProfile(),
+  });
+  const fragmentBalance = profile?.puzzle?.length ?? 0;
+  const totalFragments = profile?.puzzleTotal ?? 10;
+
+  const { data: boosterPricing = [] } = useQuery({
+    queryKey: ['booster-pricing'],
+    queryFn: () => api.getBoosterPricing(),
+  });
+
+  const boosterCosts = useMemo(() => {
+    if (boosterPricing.length === 4) {
+      return boosterPricing.map((p) => p.costFragments);
+    }
+    return config?.boosterCostFragments ?? [0, 2, 4, 6];
+  }, [boosterPricing, config]);
+
+  const selectedBoosterCost = boosterCosts[boosterTier - 1] ?? 0;
+  const hasEnoughFragments = fragmentBalance >= selectedBoosterCost;
 
   // Запись появляется только когда раунд действительно завершён
   const history = useMemo(
@@ -99,7 +130,11 @@ export function GamePage() {
         <>
           <div className="grid gap-[clamp(0.5rem,1.4vw,1.25rem)] lg:grid-rows-[auto_minmax(min-content,1fr)]">
             <div className="hidden lg:block">
-              <BalanceCard balance={balance} />
+              <BalanceCard
+                balance={balance}
+                fragments={fragmentBalance}
+                totalFragments={totalFragments}
+              />
             </div>
 
             <BetPanel
@@ -107,6 +142,8 @@ export function GamePage() {
               boosterTier={boosterTier}
               balance={balance}
               multipliers={multipliers}
+              boosterCosts={boosterCosts}
+              fragmentBalance={fragmentBalance}
               locked={flying}
               onBetChange={setBet}
             />
@@ -115,22 +152,22 @@ export function GamePage() {
           <ActionBar
             flying={flying}
             starting={controller.starting}
-            canStart={betCost >= 1 && betCost <= balance}
+            canStart={betCost >= 1 && betCost <= balance && hasEnoughFragments}
             canCashout={controller.canCashout}
             cashedOut={controller.cashedOut}
             hasLastBet={lastBet !== null}
+            autoCashout2x={autoCashout2x}
             onStart={() => startRound(betCost, boosterTier)}
             onCashout={() => void controller.cashout()}
             onRepeat={() => {
               if (!lastBet) return;
-              setBet(lastBet.cost, lastBet.tier);
-              startRound(lastBet.cost, lastBet.tier);
+              const cost = lastBet.cost;
+              const requiredFragments = boosterCosts[lastBet.tier - 1] ?? 0;
+              const tier = fragmentBalance >= requiredFragments ? lastBet.tier : 1;
+              setBet(cost, tier);
+              startRound(cost, tier);
             }}
-            onExpress={() => {
-              const cost = betCost >= 1 ? betCost : Math.min(25, balance);
-              setBet(cost, boosterTier);
-              startRound(cost, boosterTier);
-            }}
+            onToggleAutoCashout={toggleAutoCashout2x}
           />
         </>
       }

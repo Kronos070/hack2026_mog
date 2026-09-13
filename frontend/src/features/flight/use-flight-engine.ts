@@ -19,6 +19,7 @@ interface FlightCallbacks {
   onLevel: (level: number) => void;
   onBooster: () => void;
   onCrash: () => void;
+  onTick?: (multiplier: number) => void;
 }
 
 export function useFlightEngine(
@@ -100,6 +101,8 @@ export function useFlightEngine(
       state.multiplier = current;
       state.baseMultiplier = base;
       state.progress = progressInLevels(current, round.levelMultipliers);
+
+      handlers.current.onTick?.(current);
 
       if (base >= round.crashMultiplier) {
         state.crashed = true;

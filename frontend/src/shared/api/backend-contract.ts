@@ -45,6 +45,16 @@ export const cashoutResponseSchema = z.object({
   winAmount: z.number(),
   newBalance: z.number(),
   pointsEarned: z.number().nullable().optional(),
+  reward: z
+    .object({
+      kind: z.string().optional(),
+      pieceId: z.string().optional(),
+      label: z.string().optional(),
+      collected: z.number().optional(),
+      total: z.number().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const historyItemSchema = z.object({

@@ -16,6 +16,7 @@ interface SocketFlightCallbacks {
   onBooster: () => void;
   onCrash: (message: SocketMessage) => void;
   onCashout: (message: SocketMessage) => void;
+  onTick?: (multiplier: number) => void;
 }
 
 export function useSocketFlight(round: RoundStart | null, callbacks: SocketFlightCallbacks) {
@@ -109,6 +110,8 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
 
       // Высота и прогресс шара определяются фактическим множителем (при бустере шар устремляется вверх)
       state.progress = progressInLevels(displayMultiplier, round.levelMultipliers);
+
+      handlers.current.onTick?.(displayMultiplier);
 
       animationFrameId = requestAnimationFrame(loop);
     };

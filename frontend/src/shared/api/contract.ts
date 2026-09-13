@@ -52,19 +52,20 @@ export const roundStartSchema = z.object({
   balanceAfterBet: z.number().nonnegative(),
 });
 
-export const cashoutResultSchema = z.object({
-  roundId: z.string(),
-  multiplier: z.number().positive(),
-  payout: z.number().nonnegative(),
-  balance: z.number().nonnegative(),
-});
-
 export const rewardSchema = z.object({
   kind: z.literal('puzzle-piece'),
   pieceId: z.string(),
   label: z.string(),
   collected: z.number().int().nonnegative(),
   total: z.number().int().positive(),
+});
+
+export const cashoutResultSchema = z.object({
+  roundId: z.string(),
+  multiplier: z.number().positive(),
+  payout: z.number().nonnegative(),
+  balance: z.number().nonnegative(),
+  reward: rewardSchema.nullable().optional(),
 });
 
 export const achievementSchema = z.object({
@@ -158,12 +159,19 @@ export const gameConfigSchema = z.object({
   pointsCashoutBonus: z.number().nonnegative(),
   pointsBoosterBonus: z.number().nonnegative(),
   boosterTierValues: z.array(z.number().positive()).length(4),
+  boosterCostFragments: z.array(z.number().int().nonnegative()).length(4).default([0, 2, 4, 6]),
   lootProbabilities: z.object({
     green: z.array(z.number().min(0).max(1)),
     red: z.array(z.number().min(0).max(1)),
   }),
   minWinAmount: z.number().nonnegative(),
   popupTimeout: z.number().positive(),
+});
+
+export const boosterTierPricingSchema = z.object({
+  tier: z.number().int().min(1).max(4),
+  multiplier: z.number(),
+  costFragments: z.number().int().nonnegative(),
 });
 
 export const statRadarSchema = z.object({
@@ -218,6 +226,7 @@ export type User = z.infer<typeof userSchema>;
 export type BetOption = z.infer<typeof betOptionSchema>;
 export type BetRequest = z.infer<typeof betRequestSchema>;
 export type BoosterTier = z.infer<typeof boosterTierSchema>;
+export type BoosterTierPricing = z.infer<typeof boosterTierPricingSchema>;
 export type RoundStart = z.infer<typeof roundStartSchema>;
 export type CashoutResult = z.infer<typeof cashoutResultSchema>;
 export type Reward = z.infer<typeof rewardSchema>;

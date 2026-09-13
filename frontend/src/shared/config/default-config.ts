@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   pointsCashoutBonus: 25,
   pointsBoosterBonus: 50,
   boosterTierValues: [1, 2, 3, 4],
+  boosterCostFragments: [0, 2, 4, 6],
   lootProbabilities: {
     green: [0.2, 0.18, 0.15, 0.13, 0.11, 0.09, 0.07, 0.05, 0.02],
     red: [0.16, 0.15, 0.13, 0.11, 0.1, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02],

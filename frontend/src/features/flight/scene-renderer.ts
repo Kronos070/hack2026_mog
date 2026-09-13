@@ -12,8 +12,12 @@ const SMOOTHING = 0.12;
 const CAMERA_HOLD = 0.55;
 const BALLOON_HEIGHT = 96;
 const BOOM_DURATION_MS = 700;
-const BOOSTER_ICON = 52;
+const BOOSTER_ICON_MAX = 52;
+const BOOSTER_ICON_MIN = 24;
+const BOOSTER_SHARDS = 9;
+const BOOSTER_CRUMBLE_MS = 620;
 const LADDER_WIDTH = 96;
+const MIN_LINE_GAP = 34;
 
 export interface SceneSetup {
   round: RoundStart | null;
@@ -29,6 +33,7 @@ export class SceneRenderer {
   private shownProgress = 0;
   static smoothedProgress = 0;
   private explodedAt: number | null = null;
+  private boosterMissedAt: number | null = null;
 
   private readonly ctx: CanvasRenderingContext2D;
   private readonly round: RoundStart | null;
@@ -96,6 +101,12 @@ export class SceneRenderer {
     return over * (rest - BALLOON_TOP);
   }
 
+  // Иконка бустера уменьшается вместе с полем на узких экранах
+  private get boosterIcon(): number {
+    const scaled = (this.width - LADDER_WIDTH) * 0.135;
+    return Math.max(BOOSTER_ICON_MIN, Math.min(BOOSTER_ICON_MAX, scaled));
+  }
+
   private levelY(progress: number): number {
     return this.balloonY(progress) + this.cameraShift();
   }
@@ -115,11 +126,16 @@ export class SceneRenderer {
     const extra = Math.max(Math.ceil(this.cameraShift() / (slot * (this.height - BALLOON_BOTTOM - BALLOON_TOP))) + 1, 0);
     const total = count + extra;
 
+    // На низком поле рисуем линии реже, чтобы они не сливались
+    const gap = (this.height - BALLOON_BOTTOM - BALLOON_TOP) * slot;
+    const step = Math.max(Math.ceil(MIN_LINE_GAP / Math.max(gap, 1)), 1);
+
     ctx.textBaseline = 'middle';
 
     for (let index = 0; index < total; index += 1) {
       const y = this.levelY((index + 1) * slot);
       if (y < -40 || y > this.height + 40) continue;
+      const sparse = index % step !== 0 && index !== count - 1;
 
       const beyond = index >= count;
       const value = beyond ? last * Math.pow(ratio, index - count + 1) : (levels[index] ?? 1);
@@ -127,15 +143,20 @@ export class SceneRenderer {
         ? (snapshot?.multiplier ?? 0) >= value
         : (snapshot?.levelsPassed ?? 0) > index;
 
-      ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';
-      ctx.lineWidth = passed ? 2 : 1;
+      if (sparse) {
+        ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.25)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+      } else {
+        ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = passed ? 2 : 1;
+      }
       ctx.beginPath();
       ctx.moveTo(LADDER_WIDTH, y);
       ctx.lineTo(width - 12, y);
       ctx.stroke();
 
       // Подписи продолжения рисуем на канвасе: DOM-шкала знает только базовые уровни
-      if (beyond) {
+      if (beyond && !sparse) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.font = 'bold 15px Nunito, ui-sans-serif, system-ui, sans-serif';
         ctx.textAlign = 'center';
@@ -146,7 +167,8 @@ export class SceneRenderer {
 
       if (!beyond && this.round?.boosterLevel === index + 1) {
         const activated = snapshot?.boosterActivated ?? false;
-        this.drawBoosterMarker(y, activated, !activated && passed);
+        const lost = !activated && ((snapshot?.cashedOut ?? false) || passed);
+        this.drawBoosterMarker(y, activated, lost);
       }
     }
 
@@ -159,30 +181,36 @@ export class SceneRenderer {
     const tier = Math.max(Math.round(multiplier), 1);
     const x = (LADDER_WIDTH + width) / 2;
     const sprite = getBoosterSprite(tier);
-
+    const icon = this.boosterIcon;
     const time = performance.now();
-    const bob = missed ? 0 : Math.sin(time / 520) * 5;
-    const tilt = missed ? 0 : Math.sin(time / 760) * 0.09;
-    const pulse = missed ? 1 : 1 + Math.sin(time / 430) * 0.06;
+
+    if (missed) {
+      if (this.boosterMissedAt === null) this.boosterMissedAt = time;
+      this.drawBoosterShards(x, y, icon, sprite, time - this.boosterMissedAt);
+      return;
+    }
+
+    const bob = Math.sin(time / 520) * 5;
+    const tilt = Math.sin(time / 760) * 0.09;
+    const pulse = 1 + Math.sin(time / 430) * 0.06;
     const glow = 12 + Math.sin(time / 300) * 6;
 
     ctx.save();
-    ctx.globalAlpha = activated ? 1 : missed ? 0.3 : 0.75;
-    if (missed) ctx.filter = 'grayscale(1)';
+    ctx.globalAlpha = activated ? 1 : 0.75;
     ctx.translate(x, y + bob);
     ctx.rotate(tilt);
     ctx.scale(pulse, pulse);
 
     if (sprite) {
-      const h = BOOSTER_ICON;
+      const h = icon;
       const w = (sprite.naturalWidth / sprite.naturalHeight) * h;
       ctx.shadowColor = activated ? 'rgba(245, 179, 36, 0.95)' : 'rgba(255, 255, 255, 0.5)';
-      ctx.shadowBlur = activated ? glow + 10 : missed ? 0 : glow * 0.5;
+      ctx.shadowBlur = activated ? glow + 10 : glow * 0.5;
       ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
     } else {
-      ctx.fillStyle = activated ? '#eab308' : missed ? '#4b5563' : '#6b7280';
+      ctx.fillStyle = activated ? '#eab308' : '#6b7280';
       ctx.beginPath();
-      ctx.arc(0, 0, BOOSTER_ICON / 3, 0, Math.PI * 2);
+      ctx.arc(0, 0, icon / 3, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -196,23 +224,57 @@ export class SceneRenderer {
       ctx.strokeStyle = '#f5b324';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(x, y + bob, BOOSTER_ICON * (0.5 + ring * 0.7), 0, Math.PI * 2);
+      ctx.arc(x, y + bob, icon * (0.5 + ring * 0.7), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
-    ctx.fillStyle = activated
-      ? '#f5b324'
-      : missed
-        ? 'rgba(255, 255, 255, 0.35)'
-        : 'rgba(255, 255, 255, 0.85)';
+    ctx.fillStyle = activated ? '#f5b324' : 'rgba(255, 255, 255, 0.85)';
     ctx.font = 'bold 15px Nunito, ui-sans-serif, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`x${multiplier}`, x, y + bob + BOOSTER_ICON / 2 + 14);
+    ctx.fillText(`x${multiplier}`, x, y + bob + icon / 2 + icon * 0.27);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.font = '600 11px Nunito, ui-sans-serif, system-ui, sans-serif';
+  }
+
+  // Упущенный бустер рассыпается на осколки и гаснет
+  private drawBoosterShards(
+    x: number,
+    y: number,
+    icon: number,
+    sprite: HTMLImageElement | null,
+    elapsed: number,
+  ): void {
+    const { ctx } = this;
+    const progress = Math.min(elapsed / BOOSTER_CRUMBLE_MS, 1);
+    const fade = 1 - progress;
+    if (fade <= 0) return;
+
+    const piece = icon / 2.4;
+
+    for (let index = 0; index < BOOSTER_SHARDS; index += 1) {
+      const angle = (index / BOOSTER_SHARDS) * Math.PI * 2 + index * 0.7;
+      const spread = icon * 0.85 * progress;
+      const sx = x + Math.cos(angle) * spread;
+      const sy = y + Math.sin(angle) * spread * 0.6 + progress * progress * icon * 1.4;
+
+      ctx.save();
+      ctx.globalAlpha = fade * 0.9;
+      ctx.translate(sx, sy);
+      ctx.rotate(angle + progress * 3.4);
+
+      if (sprite) {
+        const w = (sprite.naturalWidth / sprite.naturalHeight) * piece;
+        ctx.drawImage(sprite, -w / 2, -piece / 2, w, piece);
+      } else {
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillRect(-piece / 2, -piece / 2, piece, piece);
+      }
+
+      ctx.restore();
+    }
   }
 
   private drawBalloon(): void {

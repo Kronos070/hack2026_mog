@@ -26,6 +26,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
+    cashedOut: false,
     crashed: false,
   });
   const handlers = useRef(callbacks);
@@ -34,6 +35,11 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
   });
 
   const getSnapshot = useCallback(() => snapshot.current, []);
+
+  const markCashout = useCallback(() => {
+    snapshot.current.cashedOut = true;
+    soundManager.stopFlightSound();
+  }, []);
 
   useEffect(() => {
     if (!round) return undefined;
@@ -44,6 +50,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
+      cashedOut: false,
       crashed: false,
     };
 
@@ -54,6 +61,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     let animationFrameId = 0;
     let isFinished = false;
     const clientStartTime = performance.now();
+    soundManager.startFlightSound();
 
     // Цикл клиентского предсказания (60 FPS через rAF):
     // шарик плавно взлетает с первой миллисекунды, не дожидаясь пинга первого тика
@@ -90,8 +98,10 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
-          if (!state.boosterActivated || passed - state.levelsPassed <= 1) {
-            soundManager.play('level-up', 0.5);
+
+          // Звуки x2, x3, x4... воспроизводятся при пересечении линий игрового поля
+          if (level >= 2 && (passed - state.levelsPassed <= 1 || level === passed)) {
+            soundManager.playMultiplier(level);
           }
         }
         state.levelsPassed = passed;
@@ -134,6 +144,8 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       }
 
       if (message.type === 'CASHOUT') {
+        state.cashedOut = true;
+        soundManager.stopFlightSound();
         handlers.current.onCashout(message);
         return;
       }
@@ -141,6 +153,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       if (message.type === 'CRASHED') {
         isFinished = true;
         cancelAnimationFrame(animationFrameId);
+        soundManager.stopFlightSound();
 
         state.crashed = true;
         const crashMult = typeof message.crashMultiplier === 'number'
@@ -171,9 +184,10 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     return () => {
       isFinished = true;
       cancelAnimationFrame(animationFrameId);
+      soundManager.stopFlightSound();
       unsubscribe();
     };
   }, [round]);
 
-  return { getSnapshot };
+  return { getSnapshot, markCashout };
 }

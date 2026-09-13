@@ -24,13 +24,15 @@ export function GlassPanel({
 }: GlassPanelProps) {
   // Оборачивает блок интерфейса в полупрозрачную карточку поверх неба
   return (
-    <section className={cn('glass-panel rounded-3xl p-5', className)}>
+    <section className={cn('glass-panel rounded-[clamp(1rem,2.5vw,1.5rem)] p-[clamp(0.75rem,1.4vw,1.125rem)]', className)}>
       {title && (
-        <header className={cn('mb-3', align === 'center' && 'text-center')}>
-          <h2 className="panel-title text-balance text-3xl font-extrabold uppercase leading-tight tracking-wide">
+        <header className={cn('mb-[clamp(0.25rem,0.8vw,0.625rem)]', align === 'center' && 'text-center')}>
+          <h2 className="panel-title text-balance text-[clamp(1.125rem,2.2vw,1.875rem)] font-extrabold uppercase leading-tight tracking-wide">
             {title}
           </h2>
-          {subtitle && <p className="mt-1 text-sm text-on-glass-dim">{subtitle}</p>}
+          {subtitle && (
+            <p className="mt-1 text-[clamp(0.7rem,1.1vw,0.875rem)] text-on-glass-dim">{subtitle}</p>
+          )}
         </header>
       )}
       <div ref={bodyRef} className={bodyClassName}>

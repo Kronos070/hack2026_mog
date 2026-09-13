@@ -11,6 +11,7 @@ export interface FlightSnapshot {
   progress: number;
   levelsPassed: number;
   boosterActivated: boolean;
+  cashedOut: boolean;
   crashed: boolean;
 }
 
@@ -31,6 +32,7 @@ export function useFlightEngine(
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
+    cashedOut: false,
     crashed: false,
   });
   const cashedOut = useRef(false);
@@ -41,6 +43,8 @@ export function useFlightEngine(
 
   const markCashout = useCallback(() => {
     cashedOut.current = true;
+    snapshot.current.cashedOut = true;
+    soundManager.stopFlightSound();
   }, []);
 
   const getSnapshot = useCallback(() => snapshot.current, []);
@@ -54,10 +58,12 @@ export function useFlightEngine(
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
+      cashedOut: false,
       crashed: false,
     };
     cashedOut.current = false;
     boosterFactor.current = 1;
+    soundManager.startFlightSound();
 
     const tick = (): void => {
       const state = snapshot.current;
@@ -71,8 +77,10 @@ export function useFlightEngine(
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
-          if (!state.boosterActivated || passed - state.levelsPassed <= 1) {
-            soundManager.play('level-up', 0.5);
+
+          // Звуки x2, x3, x4... воспроизводятся при пересечении линий игрового поля
+          if (level >= 2 && (passed - state.levelsPassed <= 1 || level === passed)) {
+            soundManager.playMultiplier(level);
           }
 
           if (
@@ -98,6 +106,7 @@ export function useFlightEngine(
         state.multiplier = round.crashMultiplier * boosterFactor.current;
         state.baseMultiplier = round.crashMultiplier;
         state.progress = progressInLevels(state.multiplier, round.levelMultipliers);
+        soundManager.stopFlightSound();
         handlers.current.onCrash();
         soundManager.play('crash', 0.8);
         return;
@@ -107,7 +116,10 @@ export function useFlightEngine(
     };
 
     frame.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame.current);
+    return () => {
+      cancelAnimationFrame(frame.current);
+      soundManager.stopFlightSound();
+    };
   }, [round, config]);
 
   return { getSnapshot, markCashout };

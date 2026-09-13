@@ -11,7 +11,7 @@ export function BonusBadge({ balance }: BonusBadgeProps) {
   return (
     <div className="glass-panel flex items-center gap-4 rounded-full py-2.5 pl-4 pr-2.5">
       <img src="/images/choose/coin.webp" alt="" className="h-10 w-auto" />
-      <span className="whitespace-nowrap text-xl font-bold text-on-glass">
+      <span className="truncate text-[clamp(0.8rem,1.6vw,1.25rem)] font-bold text-on-glass">
         Бонусы {balance.toLocaleString('ru-RU')}
       </span>
       <button

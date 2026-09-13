@@ -9,6 +9,7 @@ import { LeaderboardPage } from '@/features/leaderboard/LeaderboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { AchievementsPage } from '@/features/profile/AchievementsPage';
 import { AdminPage } from '@/features/admin/AdminPage';
+import { RulesPage } from '@/features/rules/RulesPage';
 import { SkyLayout } from '@/shared/ui/SkyLayout';
 
 export function AppRoutes() {
@@ -29,6 +30,7 @@ export function AppRoutes() {
         <Route path="/profile/:playerId" element={<ProfilePage />} />
         <Route path="/achievements" element={<AchievementsPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/rules" element={<RulesPage />} />
       </Route>
       <Route
         path="/admin"

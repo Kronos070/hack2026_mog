@@ -35,23 +35,23 @@ export function ChooseBalloonPage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <AppHeader />
 
-        <main className="mx-auto grid w-[94%] max-w-[1700px] flex-1 items-start gap-8 pb-[5vh] pt-6 lg:grid-cols-[minmax(0,1fr)_34rem]">
-          <section className="flex min-w-0 flex-col gap-6">
-            <h1 className="glass-panel w-fit rounded-full px-12 py-4 text-4xl font-extrabold uppercase tracking-wide text-on-glass">
+        <main className="anim-page mx-auto grid w-[94%] max-w-[1700px] flex-1 items-start gap-[clamp(1rem,3vw,2rem)] pb-[5vh] pt-[clamp(0.75rem,2vw,1.5rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
+          <section className="flex min-w-0 flex-col gap-[clamp(0.75rem,2vw,1.5rem)]">
+            <h1 className="glass-panel w-fit max-w-full rounded-full px-[clamp(1rem,4vw,3rem)] py-[clamp(0.5rem,1.5vw,1rem)] text-[clamp(1.125rem,3vw,2.25rem)] font-extrabold uppercase tracking-wide text-on-glass">
               Выберите шар
             </h1>
 
-            <div className="flex flex-wrap items-end gap-4 sm:gap-8">
+            <div className="grid min-w-0 grid-cols-2 items-end gap-[clamp(0.5rem,2vw,2rem)]">
               {BALLOON_OPTIONS.map((item) => (
                 <button
                   key={item.theme}
                   onClick={() => setActive(item.theme)}
                   aria-pressed={item.theme === active}
                   className={cn(
-                    'transition-all duration-300',
+                    'min-w-0 origin-bottom transition-all duration-300',
                     item.theme === active
-                      ? 'w-[min(52vw,620px)] drop-shadow-[0_18px_40px_rgb(10_40_80/0.45)]'
-                      : 'w-[min(34vw,400px)] opacity-70 hover:opacity-100',
+                      ? 'scale-100 drop-shadow-[0_18px_40px_rgb(10_40_80/0.45)]'
+                      : 'scale-[0.78] opacity-70 hover:opacity-100',
                   )}
                 >
                   <img
@@ -67,19 +67,19 @@ export function ChooseBalloonPage() {
             </div>
           </section>
 
-          <aside className="flex flex-col gap-5">
+          <aside className="flex min-w-0 flex-col gap-[clamp(0.75rem,2vw,1.25rem)]">
             <div className="flex justify-end">
               <BonusBadge balance={user?.balance ?? 0} />
             </div>
 
             <div className="glass-panel flex flex-col gap-7 rounded-3xl p-10">
-              <h2 className="text-5xl font-extrabold uppercase leading-tight text-on-glass">
+              <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-extrabold uppercase leading-tight text-on-glass">
                 {option.title}
               </h2>
 
-              <div className="glass-tile flex w-fit items-center gap-3.5 rounded-full px-7 py-3">
+              <div className="glass-tile flex w-fit max-w-full items-center gap-[clamp(0.5rem,1.5vw,0.875rem)] rounded-full px-[clamp(0.875rem,3vw,1.75rem)] py-[clamp(0.5rem,1.5vw,0.75rem)]">
                 <span className={cn('size-7 shrink-0 rounded-full', option.dotClass)} />
-                <span className="whitespace-nowrap text-xl font-semibold text-on-glass">
+                <span className="truncate text-[clamp(0.8rem,1.6vw,1.25rem)] font-semibold text-on-glass">
                   {option.colorName} · {option.levels} уровней
                 </span>
               </div>
@@ -92,7 +92,7 @@ export function ChooseBalloonPage() {
 
               <button
                 onClick={confirm}
-                className="btn-gold mt-3 flex items-center justify-center gap-3 py-6 text-3xl font-extrabold text-sky-deep"
+                className="btn-gold mt-3 flex items-center justify-center gap-3 py-[clamp(0.75rem,2vw,1.5rem)] text-[clamp(1.125rem,2.2vw,1.875rem)] font-extrabold text-sky-deep"
               >
                 Выбрать
                 <ArrowRight size={32} strokeWidth={3} />

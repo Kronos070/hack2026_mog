@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RoundResult } from '@/shared/api/contract';
 import { SkyDecor } from '@/features/home/SkyDecor';
 import { RewardList } from '@/features/results/RewardList';
+import { soundManager } from '@/shared/lib/sound-manager';
 
 const EXIT_MS = 340;
 
@@ -23,10 +24,13 @@ export function ResultModal({ result, onClose }: ResultModalProps) {
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
+    if (won) {
+      soundManager.play('win', 0.9);
+    }
     return () => {
       if (exitTimer.current !== null) window.clearTimeout(exitTimer.current);
     };
-  }, []);
+  }, [won]);
 
   const requestClose = useCallback(() => {
     setClosing((already) => {
@@ -73,7 +77,7 @@ export function ResultModal({ result, onClose }: ResultModalProps) {
           <button
             type="button"
             onClick={requestClose}
-            className="w-[min(72vw,17rem)] rounded-full bg-linear-to-b from-accent to-accent-dark py-4 text-xl font-bold text-sky-deep shadow-[0_8px_22px_rgb(4_20_40/0.45)] transition hover:brightness-110 active:translate-y-0.5"
+            className="btn-gold w-[min(72vw,17rem)] py-4 text-xl font-bold text-sky-deep"
           >
             Играть еще →
           </button>

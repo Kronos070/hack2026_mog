@@ -92,7 +92,7 @@ export function ChooseBalloonPage() {
 
               <button
                 onClick={confirm}
-                className="mt-3 flex items-center justify-center gap-3 rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep transition-transform hover:brightness-110 active:translate-y-0.5"
+                className="btn-gold mt-3 flex items-center justify-center gap-3 py-6 text-3xl font-extrabold text-sky-deep"
               >
                 Выбрать
                 <ArrowRight size={32} strokeWidth={3} />

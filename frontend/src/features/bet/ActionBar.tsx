@@ -51,19 +51,19 @@ export function ActionBar({
 
       {flying ? (
         <Button
-          variant="gold"
+          variant="bare"
           disabled={!canCashout || cashedOut}
           onClick={onCashout}
-          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
+          className="btn-gold py-6 text-3xl font-extrabold text-sky-deep"
         >
           {cashedOut ? 'Выигрыш зафиксирован' : 'Забрать'}
         </Button>
       ) : (
         <Button
-          variant="gold"
+          variant="bare"
           disabled={!canStart || starting}
           onClick={onStart}
-          className="rounded-full bg-linear-to-b from-accent to-accent-dark py-6 text-3xl font-extrabold text-sky-deep hover:brightness-110 active:translate-y-0.5"
+          className="btn-gold py-6 text-3xl font-extrabold text-sky-deep"
         >
           {starting ? 'Запуск…' : 'Начать'}
         </Button>

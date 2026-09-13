@@ -22,7 +22,7 @@ export function PuzzleCollection({ puzzle, total }: PuzzleCollectionProps) {
               key={piece}
               className={cn(
                 'rounded-lg border-2 p-4 text-center text-base',
-                collected ? 'border-glass-line font-medium' : 'border-dashed border-glass-line/40 text-on-glass-dim/60',
+                collected ? 'border-glass-line font-semibold' : 'border-dashed border-glass-line/40 text-on-glass-dim/60',
               )}
             >
               {collected ? piece : '?'}
@@ -31,7 +31,7 @@ export function PuzzleCollection({ puzzle, total }: PuzzleCollectionProps) {
         })}
       </div>
       {puzzle.length === total && (
-        <p className="mt-3 text-sm font-medium text-green-theme">Коллекция собрана полностью!</p>
+        <p className="mt-3 text-sm font-semibold text-green-theme">Коллекция собрана полностью!</p>
       )}
     </section>
   );

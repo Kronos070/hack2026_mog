@@ -2,7 +2,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '@/shared/lib/cn';
 
-type Variant = 'primary' | 'success' | 'outline' | 'ghost' | 'gold' | 'slate' | 'glass';
+type Variant = 'primary' | 'success' | 'outline' | 'ghost' | 'gold' | 'slate' | 'glass' | 'bare';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -16,6 +16,7 @@ const VARIANTS: Record<Variant, string> = {
   gold: 'bg-linear-to-b from-accent to-accent-dark text-sky-deep hover:brightness-110 active:translate-y-0.5',
   slate: 'bg-slate-btn text-on-glass hover:brightness-125',
   glass: 'glass-tile text-on-glass hover:brightness-125',
+  bare: '',
 };
 
 export function Button({ variant = 'primary', className, ...props }: ButtonProps) {
@@ -23,7 +24,8 @@ export function Button({ variant = 'primary', className, ...props }: ButtonProps
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium',
+        'inline-flex items-center justify-center px-4 py-2 text-sm font-semibold',
+        variant !== 'bare' && 'rounded-md',
         'transition-opacity disabled:cursor-not-allowed disabled:opacity-40',
         VARIANTS[variant],
         className,

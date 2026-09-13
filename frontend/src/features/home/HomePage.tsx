@@ -32,7 +32,7 @@ export function HomePage() {
 
           <button
             onClick={start}
-            className="rounded-full bg-linear-to-b from-accent to-accent-dark px-20 py-5 text-3xl font-extrabold text-sky-deep transition-transform hover:brightness-110 active:translate-y-0.5"
+            className="btn-gold px-20 py-5 text-3xl font-extrabold text-sky-deep"
           >
             Играть!
           </button>

@@ -35,7 +35,7 @@ export function AppHeader({ onOpenRules }: AppHeaderProps) {
           disabled={flying}
           className="flex shrink-0 items-center gap-3 disabled:cursor-not-allowed"
         >
-          <img src="/images/logo.webp" alt="Воздушный шар" className="-my-2 h-20 w-[5.5rem] max-w-none object-contain" />
+          <img src="/images/logo.webp" alt="Воздушный шар" className="-my-12 h-39 w-auto max-w-none" />
           <img src="/stoloto.svg" alt="Столото" className="hidden h-11 w-auto sm:block" />
         </button>
 

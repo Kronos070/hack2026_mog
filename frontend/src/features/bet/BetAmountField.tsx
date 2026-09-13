@@ -43,7 +43,7 @@ export function BetAmountField({
           onChange={(event) => onChange(Math.floor(Number(event.target.value)) || 0)}
           className={cn(
             'no-spinner min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none',
-            'placeholder:font-normal placeholder:text-on-glass-dim',
+            'placeholder:font-semibold placeholder:text-on-glass-dim',
             tooHigh ? 'text-red-theme' : 'text-on-glass',
           )}
         />

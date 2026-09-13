@@ -28,7 +28,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
       >
         {achievement.letter}
       </span>
-      <span className={cn('text-sm font-medium', !unlocked && 'text-on-glass-dim')}>
+      <span className={cn('text-sm font-semibold', !unlocked && 'text-on-glass-dim')}>
         {achievement.title}
       </span>
       <span className="text-xs text-on-glass-dim">{achievement.description}</span>

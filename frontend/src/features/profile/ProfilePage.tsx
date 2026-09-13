@@ -3,7 +3,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { StatCard } from '@/features/profile/StatCard';
@@ -23,7 +22,7 @@ export function ProfilePage() {
 
   if (isLoading || !data) {
     return (
-      <SkyLayout className="text-sm text-on-glass-dim">Загрузка профиля…</SkyLayout>
+      <p className="text-sm text-on-glass-dim">Загрузка профиля…</p>
     );
   }
 
@@ -33,7 +32,7 @@ export function ProfilePage() {
   const isOwn = !playerId;
 
   return (
-    <SkyLayout>
+    <>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
           <div className="flex items-center gap-4">
             <Avatar name={user.name} size="lg" />
@@ -86,6 +85,6 @@ export function ProfilePage() {
         <div className="mt-7">
           <PuzzleCollection puzzle={data.puzzle} total={data.puzzleTotal} />
         </div>
-    </SkyLayout>
+    </>
   );
 }

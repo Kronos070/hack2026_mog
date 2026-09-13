@@ -9,6 +9,7 @@ import { LeaderboardPage } from '@/features/leaderboard/LeaderboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { AchievementsPage } from '@/features/profile/AchievementsPage';
 import { AdminPage } from '@/features/admin/AdminPage';
+import { SkyLayout } from '@/shared/ui/SkyLayout';
 
 export function AppRoutes() {
   // Определяет доступные экраны в зависимости от роли пользователя
@@ -23,19 +24,12 @@ export function AppRoutes() {
         element={user ? <ChooseBalloonPage /> : <Navigate to="/login" replace />}
       />
       <Route path="/game" element={user ? <GamePage /> : <Navigate to="/" replace />} />
-      <Route path="/profile" element={user ? <ProfilePage /> : <Navigate to="/" replace />} />
-      <Route
-        path="/profile/:playerId"
-        element={user ? <ProfilePage /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/achievements"
-        element={user ? <AchievementsPage /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/leaderboard"
-        element={user ? <LeaderboardPage /> : <Navigate to="/" replace />}
-      />
+      <Route element={user ? <SkyLayout /> : <Navigate to="/" replace />}>
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/:playerId" element={<ProfilePage />} />
+        <Route path="/achievements" element={<AchievementsPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+      </Route>
       <Route
         path="/admin"
         element={user?.role === 'admin' ? <AdminPage /> : <Navigate to="/" replace />}

@@ -3,7 +3,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Button } from '@/shared/ui/Button';
 import { AchievementBadge } from '@/features/profile/AchievementBadge';
 
@@ -16,7 +15,7 @@ export function AchievementsPage() {
   const unlocked = achievements.filter((item) => item.unlockedAt !== null).length;
 
   return (
-    <SkyLayout>
+    <>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
           <div>
             <h1 className="text-xl font-bold">Достижения</h1>
@@ -36,6 +35,6 @@ export function AchievementsPage() {
             ))}
           </div>
         )}
-    </SkyLayout>
+    </>
   );
 }

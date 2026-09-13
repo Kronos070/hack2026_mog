@@ -137,11 +137,11 @@ export class SceneRenderer {
       // Подписи продолжения рисуем на канвасе: DOM-шкала знает только базовые уровни
       if (beyond) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.font = 'bold 15px ui-sans-serif, system-ui, sans-serif';
+        ctx.font = 'bold 15px Nunito, ui-sans-serif, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`x ${value.toFixed(2)}`, LADDER_WIDTH / 2, y);
         ctx.textAlign = 'left';
-        ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+        ctx.font = '600 11px Nunito, ui-sans-serif, system-ui, sans-serif';
       }
 
       if (!beyond && this.round?.boosterLevel === index + 1) {
@@ -206,13 +206,13 @@ export class SceneRenderer {
       : missed
         ? 'rgba(255, 255, 255, 0.35)'
         : 'rgba(255, 255, 255, 0.85)';
-    ctx.font = 'bold 15px ui-sans-serif, system-ui, sans-serif';
+    ctx.font = 'bold 15px Nunito, ui-sans-serif, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`x${multiplier}`, x, y + bob + BOOSTER_ICON / 2 + 14);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.font = '600 11px Nunito, ui-sans-serif, system-ui, sans-serif';
   }
 
   private drawBalloon(): void {

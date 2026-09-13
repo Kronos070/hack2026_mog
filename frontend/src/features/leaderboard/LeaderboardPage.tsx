@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { useSessionStore } from '@/entities/game/session-store';
 import { Button } from '@/shared/ui/Button';
-import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Avatar } from '@/shared/ui/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -23,7 +22,7 @@ export function LeaderboardPage() {
   });
 
   return (
-    <SkyLayout>
+    <>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
         <div>
           <h1 className="text-xl font-bold">Живой рейтинг</h1>
@@ -68,6 +67,6 @@ export function LeaderboardPage() {
           Пока нет участников
         </p>
       )}
-    </SkyLayout>
+    </>
   );
 }

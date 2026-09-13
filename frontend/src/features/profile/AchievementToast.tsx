@@ -35,7 +35,7 @@ export function AchievementToast() {
             {achievement.letter}
           </span>
           <span className="min-w-0">
-            <span className="block text-xs font-medium text-gold">Достижение получено</span>
+            <span className="block text-xs font-semibold text-gold">Достижение получено</span>
             <span className="block truncate font-semibold">{achievement.title}</span>
             <span className="block truncate text-xs text-muted">{achievement.description}</span>
           </span>

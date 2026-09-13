@@ -44,7 +44,7 @@ export function BoosterPicker({
             />
             <span className="text-center text-sm font-semibold leading-tight text-on-glass">
               x{multiplier}
-              <span className="block font-normal text-on-glass-dim">
+              <span className="block font-semibold text-on-glass-dim">
                 {multiplier === 1 ? '(без усил.)' : `(тир ${tier})`}
               </span>
             </span>

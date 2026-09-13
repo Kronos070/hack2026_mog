@@ -38,6 +38,7 @@ export function AdminPage() {
     mutationFn: (config: GameConfig) => api.saveConfig(config),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['config'] });
+      void queryClient.invalidateQueries({ queryKey: ['booster-pricing'] });
       toast.success('Параметры сохранены — применятся со следующего раунда');
     },
     onError: () => toast.error('Не удалось сохранить параметры'),
@@ -89,6 +90,25 @@ export function AdminPage() {
                 const values = [...draft.boosterTierValues];
                 values[index] = next;
                 setDraft({ ...draft, boosterTierValues: values });
+              }}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="text-sm font-semibold text-muted">Стоимость бустеров (в пазлах)</h2>
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {(draft.boosterCostFragments ?? [0, 2, 4, 6]).map((value, index) => (
+            <NumberField
+              key={index}
+              label={`Tier ${index + 1}`}
+              value={value}
+              step={1}
+              onChange={(next) => {
+                const values = [...(draft.boosterCostFragments ?? [0, 2, 4, 6])];
+                values[index] = Math.max(0, Math.round(next));
+                setDraft({ ...draft, boosterCostFragments: values });
               }}
             />
           ))}

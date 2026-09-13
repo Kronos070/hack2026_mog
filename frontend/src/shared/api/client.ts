@@ -2,6 +2,7 @@
 
 import type {
   BetRequest,
+  BoosterTierPricing,
   CashoutResult,
   GameConfig,
   HistoryEntry,
@@ -18,6 +19,7 @@ import type {
   User,
 } from '@/shared/api/contract';
 import {
+  boosterTierPricingSchema,
   gameConfigSchema,
   leaderboardEntrySchema,
   playerHouseEdgeSchema,
@@ -159,6 +161,41 @@ export const api = {
     const { data } = await http.put('/admin/config', config);
     cachedConfig = gameConfigSchema.parse(data);
     return cachedConfig;
+  },
+
+  async getBoosterPricing(): Promise<BoosterTierPricing[]> {
+    if (USE_MOCK) {
+      const cfg = await this.getConfig();
+      return [
+        { tier: 1, multiplier: cfg.boosterTierValues[0] ?? 1, costFragments: cfg.boosterCostFragments[0] ?? 0 },
+        { tier: 2, multiplier: cfg.boosterTierValues[1] ?? 2, costFragments: cfg.boosterCostFragments[1] ?? 2 },
+        { tier: 3, multiplier: cfg.boosterTierValues[2] ?? 3, costFragments: cfg.boosterCostFragments[2] ?? 4 },
+        { tier: 4, multiplier: cfg.boosterTierValues[3] ?? 4, costFragments: cfg.boosterCostFragments[3] ?? 6 },
+      ];
+    }
+    try {
+      const { data } = await http.get('/game/boosters');
+      return boosterTierPricingSchema.array().parse(data);
+    } catch {
+      const cfg = await this.getConfig();
+      return [
+        { tier: 1, multiplier: cfg.boosterTierValues[0] ?? 1, costFragments: cfg.boosterCostFragments[0] ?? 0 },
+        { tier: 2, multiplier: cfg.boosterTierValues[1] ?? 2, costFragments: cfg.boosterCostFragments[1] ?? 2 },
+        { tier: 3, multiplier: cfg.boosterTierValues[2] ?? 3, costFragments: cfg.boosterCostFragments[2] ?? 4 },
+        { tier: 4, multiplier: cfg.boosterTierValues[3] ?? 4, costFragments: cfg.boosterCostFragments[3] ?? 6 },
+      ];
+    }
+  },
+
+  async updateBoosterPricing(costs: number[]): Promise<BoosterTierPricing[]> {
+    if (USE_MOCK) {
+      const cfg = await this.getConfig();
+      cfg.boosterCostFragments = costs;
+      await this.saveConfig(cfg);
+      return this.getBoosterPricing();
+    }
+    const { data } = await http.put('/admin/boosters/pricing', costs);
+    return boosterTierPricingSchema.array().parse(data);
   },
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {

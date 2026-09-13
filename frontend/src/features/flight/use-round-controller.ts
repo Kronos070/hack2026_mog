@@ -65,6 +65,7 @@ export function useRoundController() {
         }
         await refreshUser();
         void queryClient.invalidateQueries({ queryKey: ['history'] });
+        void queryClient.invalidateQueries({ queryKey: ['profile'] });
       })
       .catch(() => toast.error('Ошибка завершения раунда'));
   }, [finishRound, refreshUser, queryClient, pushAchievements]);
@@ -80,6 +81,7 @@ export function useRoundController() {
       }
       void refreshUser();
       void queryClient.invalidateQueries({ queryKey: ['history'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
     [finishRound, refreshUser, queryClient, pushAchievements],
   );
@@ -123,13 +125,14 @@ export function useRoundController() {
         cashoutRef.current = null;
         startRound(started);
         void refreshUser();
+        void queryClient.invalidateQueries({ queryKey: ['profile'] });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Не удалось начать раунд');
       } finally {
         setStarting(false);
       }
     },
-    [startRound, refreshUser],
+    [startRound, refreshUser, queryClient],
   );
 
   const cashout = useCallback(async (): Promise<void> => {

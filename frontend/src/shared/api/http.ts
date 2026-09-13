@@ -17,11 +17,15 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    const status =
+    const res =
       typeof error === 'object' && error !== null && 'response' in error
-        ? (error as { response?: { status?: number } }).response?.status
+        ? (error as { response?: { status?: number; data?: { error?: string; message?: string } } }).response
         : undefined;
-    if (status === 401) clearToken();
+    if (res?.status === 401) clearToken();
+    const serverMessage = res?.data?.error ?? res?.data?.message;
+    if (serverMessage) {
+      return Promise.reject(new Error(serverMessage));
+    }
     return Promise.reject(error instanceof Error ? error : new Error('Ошибка запроса'));
   },
 );

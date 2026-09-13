@@ -22,7 +22,7 @@ export function Avatar({ name, size = 'md', className }: AvatarProps) {
       aria-hidden
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-full',
-        'border border-line bg-surface font-bold uppercase',
+        'border border-line bg-surface font-bold uppercase text-ink',
         SIZES[size],
         className,
       )}

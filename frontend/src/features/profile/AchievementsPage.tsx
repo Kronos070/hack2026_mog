@@ -3,7 +3,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { AppHeader } from '@/shared/ui/AppHeader';
+import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Button } from '@/shared/ui/Button';
 import { AchievementBadge } from '@/features/profile/AchievementBadge';
 
@@ -16,17 +16,15 @@ export function AchievementsPage() {
   const unlocked = achievements.filter((item) => item.unlockedAt !== null).length;
 
   return (
-    <>
-      <AppHeader />
-      <main className="mx-auto w-[94%] max-w-[1600px] py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+    <SkyLayout>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
           <div>
             <h1 className="text-xl font-bold">Достижения</h1>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-on-glass-dim">
               {isLoading ? 'Загрузка…' : `Получено ${unlocked} из ${achievements.length}`}
             </p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/game')}>
+          <Button variant="glass" onClick={() => navigate('/game')}>
             К игре
           </Button>
         </div>
@@ -38,7 +36,6 @@ export function AchievementsPage() {
             ))}
           </div>
         )}
-      </main>
-    </>
+    </SkyLayout>
   );
 }

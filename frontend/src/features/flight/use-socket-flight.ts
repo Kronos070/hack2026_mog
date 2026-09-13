@@ -18,6 +18,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
   // Обновляет состояние полёта по серверным тикам
   const snapshot = useRef<FlightSnapshot>({
     multiplier: 1,
+    baseMultiplier: 1,
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
@@ -33,6 +34,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
 
     snapshot.current = {
       multiplier: 1,
+      baseMultiplier: 1,
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
@@ -44,6 +46,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
 
       if (message.type === 'TICK' && typeof message.multiplier === 'number') {
         state.multiplier = message.multiplier;
+        state.baseMultiplier = message.multiplier;
         const passed = levelsPassedAt(message.multiplier, round.levelMultipliers);
         if (passed > state.levelsPassed) {
           for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
@@ -72,6 +75,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
         state.crashed = true;
         if (typeof message.crashMultiplier === 'number') {
           state.multiplier = message.crashMultiplier;
+          state.baseMultiplier = message.crashMultiplier;
           state.progress = progressInLevels(message.crashMultiplier, round.levelMultipliers);
         }
         soundManager.play('crash', 0.8);

@@ -123,7 +123,9 @@ export class SceneRenderer {
 
       const beyond = index >= count;
       const value = beyond ? last * Math.pow(ratio, index - count + 1) : (levels[index] ?? 1);
-      const passed = !beyond && (snapshot?.levelsPassed ?? 0) > index;
+      const passed = beyond
+        ? (snapshot?.baseMultiplier ?? 0) >= value
+        : (snapshot?.levelsPassed ?? 0) > index;
 
       ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = passed ? 2 : 1;
@@ -143,14 +145,15 @@ export class SceneRenderer {
       }
 
       if (!beyond && this.round?.boosterLevel === index + 1) {
-        this.drawBoosterMarker(y, snapshot?.boosterActivated ?? false);
+        const activated = snapshot?.boosterActivated ?? false;
+        this.drawBoosterMarker(y, activated, !activated && passed);
       }
     }
 
     ctx.textBaseline = 'alphabetic';
   }
 
-  private drawBoosterMarker(y: number, activated: boolean): void {
+  private drawBoosterMarker(y: number, activated: boolean, missed: boolean): void {
     const { ctx, width } = this;
     const multiplier = this.round?.boosterMultiplier ?? 1;
     const tier = Math.max(Math.round(multiplier), 1);
@@ -158,13 +161,14 @@ export class SceneRenderer {
     const sprite = getBoosterSprite(tier);
 
     const time = performance.now();
-    const bob = Math.sin(time / 520) * 5;
-    const tilt = Math.sin(time / 760) * 0.09;
-    const pulse = 1 + Math.sin(time / 430) * 0.06;
+    const bob = missed ? 0 : Math.sin(time / 520) * 5;
+    const tilt = missed ? 0 : Math.sin(time / 760) * 0.09;
+    const pulse = missed ? 1 : 1 + Math.sin(time / 430) * 0.06;
     const glow = 12 + Math.sin(time / 300) * 6;
 
     ctx.save();
-    ctx.globalAlpha = activated ? 1 : 0.75;
+    ctx.globalAlpha = activated ? 1 : missed ? 0.3 : 0.75;
+    if (missed) ctx.filter = 'grayscale(1)';
     ctx.translate(x, y + bob);
     ctx.rotate(tilt);
     ctx.scale(pulse, pulse);
@@ -173,10 +177,10 @@ export class SceneRenderer {
       const h = BOOSTER_ICON;
       const w = (sprite.naturalWidth / sprite.naturalHeight) * h;
       ctx.shadowColor = activated ? 'rgba(245, 179, 36, 0.95)' : 'rgba(255, 255, 255, 0.5)';
-      ctx.shadowBlur = activated ? glow + 10 : glow * 0.5;
+      ctx.shadowBlur = activated ? glow + 10 : missed ? 0 : glow * 0.5;
       ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
     } else {
-      ctx.fillStyle = activated ? '#eab308' : '#6b7280';
+      ctx.fillStyle = activated ? '#eab308' : missed ? '#4b5563' : '#6b7280';
       ctx.beginPath();
       ctx.arc(0, 0, BOOSTER_ICON / 3, 0, Math.PI * 2);
       ctx.fill();
@@ -197,7 +201,11 @@ export class SceneRenderer {
       ctx.restore();
     }
 
-    ctx.fillStyle = activated ? '#f5b324' : 'rgba(255, 255, 255, 0.85)';
+    ctx.fillStyle = activated
+      ? '#f5b324'
+      : missed
+        ? 'rgba(255, 255, 255, 0.35)'
+        : 'rgba(255, 255, 255, 0.85)';
     ctx.font = 'bold 15px ui-sans-serif, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

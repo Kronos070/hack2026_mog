@@ -3,7 +3,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
-import { AppHeader } from '@/shared/ui/AppHeader';
+import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { StatCard } from '@/features/profile/StatCard';
@@ -23,12 +23,7 @@ export function ProfilePage() {
 
   if (isLoading || !data) {
     return (
-      <>
-        <AppHeader />
-        <main className="mx-auto w-[94%] max-w-[1600px] py-6 text-sm text-muted">
-          Загрузка профиля…
-        </main>
-      </>
+      <SkyLayout className="text-sm text-on-glass-dim">Загрузка профиля…</SkyLayout>
     );
   }
 
@@ -38,15 +33,13 @@ export function ProfilePage() {
   const isOwn = !playerId;
 
   return (
-    <>
-      <AppHeader />
-      <main className="mx-auto w-[94%] max-w-[1600px] py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+    <SkyLayout>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
           <div className="flex items-center gap-4">
             <Avatar name={user.name} size="lg" />
             <div>
               <h1 className="text-xl font-bold">{user.name}</h1>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-on-glass-dim">
                 {data.rank.title}
                 {!isOwn && ' · чужой профиль'}
               </p>
@@ -54,11 +47,11 @@ export function ProfilePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {isOwn && (
-              <Button variant="outline" onClick={() => navigate('/achievements')}>
+              <Button variant="glass" onClick={() => navigate('/achievements')}>
                 Все достижения
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate(isOwn ? '/game' : '/leaderboard')}>
+            <Button variant="glass" onClick={() => navigate(isOwn ? '/game' : '/leaderboard')}>
               {isOwn ? 'К игре' : 'К рейтингу'}
             </Button>
           </div>
@@ -80,7 +73,7 @@ export function ProfilePage() {
         </section>
 
         <section className="mt-7">
-          <h2 className="text-sm font-semibold text-muted">
+          <h2 className="text-sm font-semibold text-on-glass-dim">
             Достижения · {unlocked.length} из {achievements.length}
           </h2>
           <div className="mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -93,7 +86,6 @@ export function ProfilePage() {
         <div className="mt-7">
           <PuzzleCollection puzzle={data.puzzle} total={data.puzzleTotal} />
         </div>
-      </main>
-    </>
+    </SkyLayout>
   );
 }

@@ -44,4 +44,3 @@ export const PUZZLE_PIECES: readonly string[] = [
 ];
 
 export const ONBOARDING_DURATION_MS = 4000;
-export const RESULT_AUTO_EXIT_MS = 10000;

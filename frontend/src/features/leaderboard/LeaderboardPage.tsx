@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import { useSessionStore } from '@/entities/game/session-store';
 import { Button } from '@/shared/ui/Button';
-import { AppHeader } from '@/shared/ui/AppHeader';
+import { SkyLayout } from '@/shared/ui/SkyLayout';
 import { Avatar } from '@/shared/ui/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -23,23 +23,21 @@ export function LeaderboardPage() {
   });
 
   return (
-    <>
-      <AppHeader />
-      <main className="mx-auto w-[94%] max-w-[1600px] py-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+    <SkyLayout>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-glass-line/40 pb-4">
         <div>
           <h1 className="text-xl font-bold">Живой рейтинг</h1>
-          <p className="text-sm text-muted">Обновляется каждую секунду</p>
+          <p className="text-sm text-on-glass-dim">Обновляется каждую секунду</p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/game')}>
+        <Button variant="glass" onClick={() => navigate('/game')}>
           К игре
         </Button>
       </div>
 
       {isLoading ? (
-        <p className="mt-6 text-sm text-muted">Загрузка рейтинга…</p>
+        <p className="mt-6 text-sm text-on-glass-dim">Загрузка рейтинга…</p>
       ) : (
-        <ol className="mt-6 divide-y divide-line overflow-hidden rounded-lg border-2 border-line">
+        <ol className="mt-6 divide-y divide-line overflow-hidden rounded-lg border-2 border-glass-line/40">
           {entries.map((entry, index) => {
             const isCurrent = entry.playerId === user?.id;
             return (
@@ -47,15 +45,15 @@ export function LeaderboardPage() {
                 <button
                   onClick={() => navigate(isCurrent ? '/profile' : `/profile/${entry.playerId}`)}
                   className={cn(
-                    'flex w-full items-center gap-4 px-4 py-3.5 text-left text-base transition-colors hover:bg-ink/5',
-                    isCurrent && 'bg-ink/5 font-semibold',
+                    'flex w-full items-center gap-4 px-4 py-3.5 text-left text-base transition-colors hover:bg-white/10',
+                    isCurrent && 'bg-white/10 font-semibold',
                   )}
                 >
-                  <span className="w-9 shrink-0 tabular-nums text-muted">{index + 1}</span>
+                  <span className="w-9 shrink-0 tabular-nums text-on-glass-dim">{index + 1}</span>
                   <Avatar name={entry.playerName} size="sm" />
                   <span className="min-w-0 flex-1 truncate">
                     {entry.playerName}
-                    {isCurrent && <span className="ml-2 text-sm text-muted">вы</span>}
+                    {isCurrent && <span className="ml-2 text-sm text-on-glass-dim">вы</span>}
                   </span>
                   <span className="shrink-0 tabular-nums">{entry.points} очков</span>
                 </button>
@@ -66,11 +64,10 @@ export function LeaderboardPage() {
       )}
 
       {entries.length === 0 && !isLoading && (
-        <p className="mt-6 rounded-lg border-2 border-dashed border-line p-5 text-base text-muted">
+        <p className="mt-6 rounded-lg border-2 border-dashed border-glass-line/40 p-5 text-base text-on-glass-dim">
           Пока нет участников
         </p>
       )}
-      </main>
-    </>
+    </SkyLayout>
   );
 }

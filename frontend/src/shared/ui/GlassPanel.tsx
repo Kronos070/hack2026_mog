@@ -1,6 +1,6 @@
 // Стеклянная панель игрового интерфейса с заголовком и подписью
 
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 interface GlassPanelProps {
@@ -9,6 +9,7 @@ interface GlassPanelProps {
   align?: 'left' | 'center';
   className?: string;
   bodyClassName?: string;
+  bodyRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
 
@@ -18,6 +19,7 @@ export function GlassPanel({
   align = 'left',
   className,
   bodyClassName,
+  bodyRef,
   children,
 }: GlassPanelProps) {
   // Оборачивает блок интерфейса в полупрозрачную карточку поверх неба
@@ -31,7 +33,9 @@ export function GlassPanel({
           {subtitle && <p className="mt-1 text-sm text-on-glass-dim">{subtitle}</p>}
         </header>
       )}
-      <div className={bodyClassName}>{children}</div>
+      <div ref={bodyRef} className={bodyClassName}>
+        {children}
+      </div>
     </section>
   );
 }

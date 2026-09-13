@@ -11,8 +11,8 @@ export function RankCard({ rank }: { rank: Rank }) {
     span > 0 ? Math.min(Math.max((rank.profit - floor) / span, 0), 1) : 1;
 
   return (
-    <div className="rounded-lg border-2 border-line p-4">
-      <p className="text-xs text-muted">Ранг</p>
+    <div className="rounded-lg border-2 border-glass-line/40 p-4">
+      <p className="text-xs text-on-glass-dim">Ранг</p>
       <p className="mt-1 text-2xl font-bold">{rank.title}</p>
 
       <p className={cn('mt-1 text-sm tabular-nums', rank.profit >= 0 ? 'text-green-theme' : 'text-red-theme')}>
@@ -27,7 +27,7 @@ export function RankCard({ rank }: { rank: Rank }) {
         />
       </div>
 
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-xs text-on-glass-dim">
         {rank.nextTitle
           ? `До ранга «${rank.nextTitle}»: ${Math.max((rank.nextAt ?? 0) - rank.profit, 0)}`
           : 'Максимальный ранг'}

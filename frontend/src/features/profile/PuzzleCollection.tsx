@@ -11,7 +11,7 @@ export function PuzzleCollection({ puzzle, total }: PuzzleCollectionProps) {
   // Показывает прогресс сбора коллекции
   return (
     <section>
-      <h2 className="text-sm font-semibold text-muted">
+      <h2 className="text-sm font-semibold text-on-glass-dim">
         Коллекция · {puzzle.length} из {total}
       </h2>
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -22,7 +22,7 @@ export function PuzzleCollection({ puzzle, total }: PuzzleCollectionProps) {
               key={piece}
               className={cn(
                 'rounded-lg border-2 p-4 text-center text-base',
-                collected ? 'border-ink font-medium' : 'border-dashed border-line text-muted/60',
+                collected ? 'border-glass-line font-medium' : 'border-dashed border-glass-line/40 text-on-glass-dim/60',
               )}
             >
               {collected ? piece : '?'}

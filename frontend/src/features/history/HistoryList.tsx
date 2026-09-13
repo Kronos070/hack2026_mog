@@ -18,7 +18,7 @@ export function HistoryList({ entries, limit = 12 }: HistoryListProps) {
       {entries.slice(0, limit).map((entry) => (
         <li
           key={entry.roundId}
-          className="glass-tile flex items-center gap-3 rounded-xl px-3.5 py-3 text-base"
+          className="glass-tile flex snap-start items-center gap-3 rounded-xl px-3.5 py-3 text-base"
         >
           <span className="min-w-0 flex-1 truncate text-on-glass">{entry.playerName}</span>
           <span className="shrink-0 font-bold tabular-nums text-accent">

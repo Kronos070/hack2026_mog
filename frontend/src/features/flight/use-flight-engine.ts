@@ -7,6 +7,7 @@ import { soundManager } from '@/shared/lib/sound-manager';
 
 export interface FlightSnapshot {
   multiplier: number;
+  baseMultiplier: number;
   progress: number;
   levelsPassed: number;
   boosterActivated: boolean;
@@ -26,6 +27,7 @@ export function useFlightEngine(
 ) {
   const snapshot = useRef<FlightSnapshot>({
     multiplier: 1,
+    baseMultiplier: 1,
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
@@ -48,6 +50,7 @@ export function useFlightEngine(
 
     snapshot.current = {
       multiplier: 1,
+      baseMultiplier: 1,
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
@@ -85,11 +88,13 @@ export function useFlightEngine(
       }
 
       state.multiplier = current;
+      state.baseMultiplier = base;
       state.progress = progressInLevels(base, round.levelMultipliers);
 
       if (base >= round.crashMultiplier) {
         state.crashed = true;
         state.multiplier = round.crashMultiplier * boosterFactor.current;
+        state.baseMultiplier = round.crashMultiplier;
         state.progress = progressInLevels(round.crashMultiplier, round.levelMultipliers);
         handlers.current.onCrash();
         soundManager.play('crash', 0.8);

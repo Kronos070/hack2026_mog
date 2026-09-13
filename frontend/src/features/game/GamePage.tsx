@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/shared/api/client';
 import type { BoosterTier } from '@/shared/api/contract';
 import { buildLevelMultipliers } from '@/shared/lib/crash-math';
+import { useSnapRows } from '@/shared/lib/use-snap-rows';
 import { DEFAULT_CONFIG } from '@/shared/config/default-config';
 import { useSessionStore } from '@/entities/game/session-store';
 import { useRoundController } from '@/features/flight/use-round-controller';
@@ -19,12 +20,13 @@ import { BalanceCard } from '@/features/bet/BalanceCard';
 import { BetPanel } from '@/features/bet/BetPanel';
 import { ActionBar } from '@/features/bet/ActionBar';
 import { FlightOverlay } from '@/features/flight/FlightOverlay';
-import { ResultPanel } from '@/features/results/ResultPanel';
+import { ResultModal } from '@/features/results/ResultModal';
 
 export function GamePage() {
   // Управляет всеми фазами раунда в пределах одного экрана
   const { user, theme, betCost, boosterTier, lastBet, setBet, rememberBet } = useSessionStore();
   const [rulesOpen, setRulesOpen] = useState(false);
+  const historyRef = useSnapRows<HTMLDivElement>();
 
   const controller = useRoundController();
   const { phase, round, result, config, getSnapshot } = controller;
@@ -77,7 +79,8 @@ export function GamePage() {
             title="История игр"
             align="center"
             className="flex min-h-0 flex-1 flex-col"
-            bodyClassName="no-scrollbar min-h-0 flex-1 overflow-y-auto"
+            bodyRef={historyRef}
+            bodyClassName="no-scrollbar min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto"
           >
             <HistoryList entries={history} />
           </GlassPanel>
@@ -133,11 +136,7 @@ export function GamePage() {
       </Modal>
 
       {phase === 'finished' && result && (
-        <div className="fixed inset-0 z-30 grid place-items-center bg-sky-deep/60 p-4 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-md rounded-2xl p-5 text-on-glass">
-            <ResultPanel result={result} onPlayAgain={controller.playAgain} />
-          </div>
-        </div>
+        <ResultModal result={result} onClose={controller.playAgain} />
       )}
     </GameLayout>
   );

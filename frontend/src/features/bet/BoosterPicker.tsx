@@ -21,7 +21,7 @@ export function BoosterPicker({
 }: BoosterPickerProps) {
   // Переключает множитель бустера для следующего раунда
   return (
-    <div className="grid grid-cols-4 gap-3.5">
+    <div className="grid grid-cols-2 gap-[clamp(0.375rem,1.2vw,0.875rem)] lg:grid-cols-4">
       {TIERS.map((tier) => {
         const multiplier = multipliers[tier - 1] ?? 1;
         const active = value === tier;
@@ -35,7 +35,7 @@ export function BoosterPicker({
             }}
             aria-pressed={active}
             className={cn(
-              'flex flex-col items-center gap-2 rounded-xl px-2 py-3 transition-all disabled:cursor-not-allowed',
+              'flex min-w-0 flex-col items-center gap-[clamp(0.2rem,0.6vw,0.375rem)] rounded-xl px-[clamp(0.25rem,1vw,0.5rem)] py-[clamp(0.3rem,0.9vw,0.625rem)] transition-all disabled:cursor-not-allowed',
               active
                 ? 'bg-linear-to-b from-pick to-pick-dark shadow-[0_4px_16px_rgb(60_130_10/0.5)]'
                 : 'glass-tile hover:brightness-125',
@@ -44,9 +44,9 @@ export function BoosterPicker({
             <img
               src={`/images/boosters/tier-${tier}.png`}
               alt=""
-              className="h-12 w-auto drop-shadow-[0_2px_4px_rgb(4_20_40/0.5)]"
+              className="h-[clamp(1.75rem,4.5vw,3rem)] w-auto drop-shadow-[0_2px_4px_rgb(4_20_40/0.5)]"
             />
-            <span className="text-center text-sm font-semibold leading-tight text-on-glass">
+            <span className="text-center text-[clamp(0.65rem,1.15vw,0.875rem)] font-semibold leading-tight text-on-glass">
               x{multiplier}
               <span className="block font-semibold text-on-glass-dim">
                 {multiplier === 1 ? '(без усил.)' : `(тир ${tier})`}

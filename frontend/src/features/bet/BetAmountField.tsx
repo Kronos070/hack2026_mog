@@ -24,10 +24,10 @@ export function BetAmountField({
   const tooHigh = value > balance;
 
   return (
-    <div>
+    <div className="min-h-0">
       <div
         className={cn(
-          'flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors',
+          'flex min-w-0 items-center gap-[clamp(0.375rem,1.2vw,0.75rem)] rounded-xl px-[clamp(0.625rem,1.6vw,1rem)] py-[clamp(0.3rem,1vw,0.5rem)] transition-colors',
           'glass-tile',
           tooHigh && 'border-red-theme',
         )}
@@ -43,7 +43,7 @@ export function BetAmountField({
           aria-label="Сумма ставки"
           onChange={(event) => onChange(Math.floor(Number(event.target.value)) || 0)}
           className={cn(
-            'no-spinner min-w-0 flex-1 bg-transparent text-xl font-semibold tabular-nums outline-none',
+            'no-spinner min-w-0 flex-1 bg-transparent text-[clamp(0.9rem,1.6vw,1.25rem)] font-semibold tabular-nums outline-none',
             'placeholder:font-semibold placeholder:text-on-glass-dim',
             tooHigh ? 'text-red-theme' : 'text-on-glass',
           )}
@@ -56,13 +56,13 @@ export function BetAmountField({
             onChange(Math.min(value + STEP, balance));
           }}
           aria-label="Увеличить ставку"
-          className="glass-tile shrink-0 rounded-lg p-2 text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+          className="glass-tile shrink-0 rounded-lg p-[clamp(0.3rem,1vw,0.5rem)] text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Plus size={22} />
+          <Plus className="size-[clamp(1rem,2.2vw,1.375rem)]" />
         </button>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-[clamp(0.375rem,1vw,0.625rem)] grid grid-cols-2 gap-[clamp(0.2rem,0.6vw,0.5rem)] min-[380px]:grid-cols-3 lg:flex">
         {BET_PRESETS.map((preset) => (
           <button
             key={preset}
@@ -71,7 +71,7 @@ export function BetAmountField({
               soundManager.play('select', 0.4);
               onChange(preset);
             }}
-            className="glass-tile flex-1 rounded-lg px-1 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+            className="glass-tile min-w-0 flex-1 rounded-lg px-1 min-h-[2.25rem] py-[clamp(0.3rem,1vw,0.5rem)] text-[clamp(0.75rem,1.1vw,0.875rem)] font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {preset}
           </button>
@@ -82,9 +82,10 @@ export function BetAmountField({
             soundManager.play('select', 0.4);
             onChange(balance);
           }}
-          className="glass-tile shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
+          className="glass-tile min-h-[2.25rem] min-w-0 truncate rounded-lg px-[clamp(0.375rem,1.5vw,0.75rem)] py-[clamp(0.3rem,1vw,0.5rem)] text-[clamp(0.7rem,1.1vw,0.875rem)] font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40 lg:shrink-0 lg:whitespace-nowrap"
         >
-          Весь баланс
+          <span className="lg:hidden">Всё</span>
+          <span className="hidden lg:inline">Весь баланс</span>
         </button>
       </div>
 

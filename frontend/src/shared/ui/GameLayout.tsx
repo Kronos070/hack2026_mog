@@ -14,7 +14,6 @@ interface GameLayoutProps {
   theme: Theme;
   getSnapshot?: (() => FlightSnapshot) | undefined;
   sceneOverlay?: ReactNode;
-  onOpenRules?: (() => void) | undefined;
   asideLeft?: ReactNode;
   asideRight?: ReactNode;
   stickyBelow?: ReactNode;
@@ -28,7 +27,6 @@ export function GameLayout({
   getSnapshot,
   sceneOverlay,
   stickyBelow,
-  onOpenRules,
   asideLeft,
   asideRight,
   children,
@@ -41,15 +39,17 @@ export function GameLayout({
       style={{ '--header-h': `${headerHeight}px` } as CSSProperties}
       className="relative min-h-screen bg-sky-deep bg-[url('/images/sky-background.webp')] bg-cover bg-center bg-fixed"
     >
-      <AppHeader onOpenRules={onOpenRules} />
+      <AppHeader />
 
-      <main className="mx-auto flex w-[94%] max-w-[1700px] flex-col gap-3 pt-7 pb-[5vh] lg:h-[calc(100vh-var(--header-h))]">
-        <div className="grid min-h-0 flex-1 items-stretch gap-5 lg:grid-cols-[0.85fr_1.4583fr_1.4917fr]">
-          <aside className="no-scrollbar order-2 flex min-h-0 min-w-0 flex-col gap-9 overflow-y-auto lg:order-1">
+      <main className="mx-auto flex w-[94%] max-w-[1700px] flex-col gap-[clamp(0.5rem,1.5vw,0.75rem)] pt-[clamp(0.75rem,2vw,1.75rem)] pb-[5vh] game-main">
+        <div className="grid flex-1 grid-cols-[minmax(0,1fr)] items-stretch gap-[clamp(0.75rem,2vw,1.25rem)] lg:min-h-0 lg:grid-cols-[0.85fr_1.4583fr_1.4917fr]">
+          <div className="order-2 lg:hidden">{stickyBelow}</div>
+
+          <aside className="no-scrollbar order-4 flex min-w-0 flex-col gap-[clamp(0.75rem,2vw,2.25rem)] lg:order-1 lg:max-h-[calc(100vh-var(--header-h)-6rem)] lg:min-h-0 lg:overflow-y-auto">
             {asideLeft}
           </aside>
 
-          <section className="order-1 h-[70vh] min-h-0 min-w-0 lg:order-2 lg:h-full">
+          <section className="order-1 h-[clamp(14rem,42vh,70vh)] min-h-0 min-w-0 lg:order-2 lg:h-auto">
             <div className="glass-edge relative h-full overflow-hidden rounded-3xl">
               <div
                 aria-hidden
@@ -72,13 +72,13 @@ export function GameLayout({
             </div>
           </section>
 
-          <aside className="no-scrollbar order-3 flex min-h-0 min-w-0 flex-col gap-10 overflow-y-auto">
+          <aside className="no-scrollbar order-3 grid min-w-0 content-start gap-[clamp(0.5rem,1.4vw,1.25rem)] lg:grid-rows-[minmax(min-content,1fr)_auto] lg:content-stretch">
             {asideRight}
           </aside>
         </div>
 
-        <div className="grid lg:grid-cols-[0.85fr_1.4583fr_1.4917fr] lg:gap-5">
-          <div className="hidden lg:block" />
+        <div className="hidden lg:grid lg:grid-cols-[0.85fr_1.4583fr_1.4917fr] lg:gap-5">
+          <div />
           {stickyBelow}
         </div>
       </main>

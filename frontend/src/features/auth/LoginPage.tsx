@@ -55,7 +55,7 @@ export function LoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-[94%] max-w-md flex-col justify-center gap-6 py-12">
+    <main className="anim-page mx-auto flex min-h-dvh w-[94%] max-w-md flex-col justify-center gap-6 py-12">
       <header className="text-center">
         <h1 className="text-2xl font-bold">Воздушный Шар</h1>
         <p className="mt-2 text-sm text-muted">

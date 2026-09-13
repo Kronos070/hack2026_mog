@@ -23,16 +23,18 @@ export function HomePage() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <AppHeader />
 
-        <main className="flex flex-1 flex-col items-center justify-center gap-10 px-4 pb-[8vh]">
+        <main className="anim-page flex flex-1 flex-col items-center justify-center gap-10 px-4 pb-[8vh]">
           <img
             src="/images/home/balloon.webp"
             alt="Воздушный шар"
-            className="w-[min(82vw,620px)] drop-shadow-[0_18px_40px_rgb(10_40_80/0.45)]"
+            width={900}
+            height={872}
+            className="h-auto w-[min(82vw,620px)] drop-shadow-[0_18px_40px_rgb(10_40_80/0.45)]"
           />
 
           <button
             onClick={start}
-            className="btn-gold px-20 py-5 text-3xl font-extrabold text-sky-deep"
+            className="btn-gold px-[clamp(2.5rem,8vw,5rem)] py-[clamp(0.75rem,1.8vw,1.25rem)] text-[clamp(1.25rem,2.4vw,1.875rem)] font-extrabold text-sky-deep"
           >
             Играть!
           </button>

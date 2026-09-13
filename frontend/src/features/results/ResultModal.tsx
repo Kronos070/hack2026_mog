@@ -77,7 +77,7 @@ export function ResultModal({ result, onClose }: ResultModalProps) {
           <button
             type="button"
             onClick={requestClose}
-            className="w-[min(72vw,17rem)] rounded-full bg-linear-to-b from-accent to-accent-dark py-4 text-xl font-bold text-sky-deep shadow-[0_8px_22px_rgb(4_20_40/0.45)] transition hover:brightness-110 active:translate-y-0.5"
+            className="btn-gold w-[min(72vw,17rem)] py-4 text-xl font-bold text-sky-deep"
           >
             Играть еще →
           </button>

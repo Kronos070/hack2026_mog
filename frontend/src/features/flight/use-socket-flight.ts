@@ -26,6 +26,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
+    cashedOut: false,
     crashed: false,
   });
   const handlers = useRef(callbacks);
@@ -34,6 +35,11 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
   });
 
   const getSnapshot = useCallback(() => snapshot.current, []);
+
+  const markCashout = useCallback(() => {
+    snapshot.current.cashedOut = true;
+    soundManager.stopFlightSound();
+  }, []);
 
   useEffect(() => {
     if (!round) return undefined;
@@ -44,6 +50,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
+      cashedOut: false,
       crashed: false,
     };
 
@@ -137,6 +144,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       }
 
       if (message.type === 'CASHOUT') {
+        state.cashedOut = true;
         soundManager.stopFlightSound();
         handlers.current.onCashout(message);
         return;
@@ -181,5 +189,5 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     };
   }, [round]);
 
-  return { getSnapshot };
+  return { getSnapshot, markCashout };
 }

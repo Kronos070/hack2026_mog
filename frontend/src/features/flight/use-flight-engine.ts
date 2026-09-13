@@ -11,6 +11,7 @@ export interface FlightSnapshot {
   progress: number;
   levelsPassed: number;
   boosterActivated: boolean;
+  cashedOut: boolean;
   crashed: boolean;
 }
 
@@ -31,6 +32,7 @@ export function useFlightEngine(
     progress: 0,
     levelsPassed: 0,
     boosterActivated: false,
+    cashedOut: false,
     crashed: false,
   });
   const cashedOut = useRef(false);
@@ -41,6 +43,7 @@ export function useFlightEngine(
 
   const markCashout = useCallback(() => {
     cashedOut.current = true;
+    snapshot.current.cashedOut = true;
     soundManager.stopFlightSound();
   }, []);
 
@@ -55,6 +58,7 @@ export function useFlightEngine(
       progress: 0,
       levelsPassed: 0,
       boosterActivated: false,
+      cashedOut: false,
       crashed: false,
     };
     cashedOut.current = false;

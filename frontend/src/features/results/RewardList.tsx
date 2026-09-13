@@ -1,6 +1,7 @@
 // Блок «Награда»: выпавшие монеты и фрагменты пазла за раунд
 
 import type { RoundResult } from '@/shared/api/contract';
+import { getPuzzlePieceLabel, getPuzzlePieceSrc } from '@/shared/config/puzzles';
 
 interface RewardItem {
   key: string;
@@ -28,10 +29,12 @@ export function RewardList({ result, puzzleEarned }: RewardListProps) {
   }
 
   if (puzzleEarned) {
+    const pieceSrc = getPuzzlePieceSrc(result.reward.pieceId);
+    const pieceAlt = result.reward.label || getPuzzlePieceLabel(result.reward.pieceId);
     items.push({
       key: 'puzzle',
-      src: '/images/boosters/tier-2.png',
-      alt: result.reward.label,
+      src: pieceSrc,
+      alt: pieceAlt,
       amount: 1,
     });
   }

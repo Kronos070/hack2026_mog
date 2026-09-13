@@ -1,7 +1,8 @@
 // Сборка итогов раунда из серверного сообщения о крахе
 import type { RoundResult, RoundStart } from '@/shared/api/contract';
 import type { SocketMessage } from '@/features/flight/game-socket';
-import { PUZZLE_PIECES, PUZZLE_TOTAL } from '@/shared/config/default-config';
+import { getPuzzlePieceLabel } from '@/shared/config/puzzles';
+import { PUZZLE_TOTAL } from '@/shared/config/default-config';
 
 export function buildRoundResult(
   round: RoundStart,
@@ -11,6 +12,7 @@ export function buildRoundResult(
   // Переводит событие CRASHED в модель результата раунда
   const payout = cashoutMultiplier !== null ? Math.round(round.betCost * cashoutMultiplier) : 0;
   const collected = Math.min((message.levelsPassed ?? 0) % PUZZLE_TOTAL, PUZZLE_TOTAL - 1);
+  const fallbackPieceId = `piece_${collected + 1}`;
 
   return {
     roundId: round.roundId,
@@ -24,8 +26,8 @@ export function buildRoundResult(
     boosterActivated: message.boosterActivated ?? false,
     reward: {
       kind: 'puzzle-piece',
-      pieceId: message.reward?.pieceId ?? `piece-${collected}`,
-      label: message.reward?.label ?? PUZZLE_PIECES[collected] ?? 'Фрагмент',
+      pieceId: message.reward?.pieceId ?? fallbackPieceId,
+      label: message.reward?.label ?? getPuzzlePieceLabel(message.reward?.pieceId ?? fallbackPieceId),
       collected: message.reward?.collected ?? collected + 1,
       total: message.reward?.total ?? PUZZLE_TOTAL,
     },

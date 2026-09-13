@@ -19,7 +19,10 @@ export function ResultModal({ result, onClose }: ResultModalProps) {
   const exitTimer = useRef<number | null>(null);
   const [closing, setClosing] = useState(false);
   const won = result.payout > 0;
-  const puzzleEarned = result.reward.collected < result.reward.total;
+  const puzzleEarned =
+    Boolean(result.reward?.pieceId) &&
+    result.reward.pieceId !== 'none' &&
+    result.reward.pieceId !== 'completed';
 
   useEffect(() => {
     const dialog = ref.current;

@@ -19,7 +19,7 @@ export function mockLogin(userId: string): User {
   const state = updateState((draft) => {
     draft.currentUserId = userId;
   });
-  const user = state.users[userId];
+  const user = state.users[userId] ?? state.users['user'];
   if (!user) throw new Error('Пользователь не найден');
   return user;
 }

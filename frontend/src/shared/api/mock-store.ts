@@ -182,6 +182,7 @@ function createInitialState(): MockState {
   return {
     users: {
       user: { id: 'user', name: 'Тестовый игрок', role: 'user', balance: 1000, points: 0 },
+      test_user: { id: 'test_user', name: 'Тестовый Пользователь', role: 'user', balance: 10000, points: 500 },
       admin: { id: 'admin', name: 'Администратор', role: 'admin', balance: 5000, points: 0 },
     },
     currentUserId: null,
@@ -198,9 +199,14 @@ function createInitialState(): MockState {
 export function readState(): MockState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createInitialState();
+    const initial = createInitialState();
+    if (!raw) return initial;
     const parsed = JSON.parse(raw) as Partial<MockState>;
-    const state = { ...createInitialState(), ...parsed };
+    const state = {
+      ...initial,
+      ...parsed,
+      users: { ...initial.users, ...(parsed.users ?? {}) },
+    };
     if (!state.history || state.history.length === 0) {
       state.history = INITIAL_HISTORY;
     }

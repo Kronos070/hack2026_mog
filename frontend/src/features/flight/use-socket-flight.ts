@@ -85,17 +85,20 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       state.multiplier = displayMultiplier;
       state.baseMultiplier = baseMultiplier;
 
-      // Проверка прохождения уровней (по БАЗОВОМУ множителю высоты, как в useFlightEngine и на бэкенде)
-      const passed = levelsPassedAt(baseMultiplier, round.levelMultipliers);
+      // Проверка прохождения уровней (по актуальному множителю полета шара)
+      const passed = levelsPassedAt(displayMultiplier, round.levelMultipliers);
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
-          soundManager.play('level-up', 0.5);
+          if (!state.boosterActivated || passed - state.levelsPassed <= 1) {
+            soundManager.play('level-up', 0.5);
+          }
         }
         state.levelsPassed = passed;
       }
 
-      state.progress = progressInLevels(baseMultiplier, round.levelMultipliers);
+      // Высота и прогресс шара определяются фактическим множителем (при бустере шар устремляется вверх)
+      state.progress = progressInLevels(displayMultiplier, round.levelMultipliers);
 
       animationFrameId = requestAnimationFrame(loop);
     };
@@ -118,7 +121,13 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
 
       if (message.type === 'BOOSTER_ACTIVATED') {
         state.boosterActivated = true;
-        boosterFactor = message.boosterMultiplier ?? round.boosterMultiplier ?? 2;
+        const mult = message.boosterMultiplier ?? round.boosterMultiplier ?? 2;
+        boosterFactor = mult;
+        if (typeof message.multiplier === 'number') {
+          targetMultiplier = Math.max(targetMultiplier, message.multiplier);
+        } else {
+          targetMultiplier = Math.max(targetMultiplier, currentMultiplier * mult);
+        }
         handlers.current.onBooster();
         soundManager.play('boost', 0.7);
         return;
@@ -144,7 +153,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
 
         state.multiplier = crashMult;
         state.baseMultiplier = finalBase;
-        state.progress = progressInLevels(finalBase, round.levelMultipliers);
+        state.progress = progressInLevels(crashMult, round.levelMultipliers);
 
         soundManager.play('crash', 0.8);
         handlers.current.onCrash(message);

@@ -43,6 +43,18 @@ class MetaGameServiceTest {
         public long countCompletedRoundsByUserId(Long userId) {
             return completedCount;
         }
+
+        @Override
+        public UserGameStats getUserStats(Long userId) {
+            return new UserGameStats(0, 0, 1.0, 0L, 0L, 0L);
+        }
+    }
+
+    static class StubUserAchievementRepository extends UserAchievementRepository {
+        @Override
+        public List<com.hack2026.mog.entities.UserAchievement> findByUserId(Long userId) {
+            return List.of();
+        }
     }
 
     static class StubUserStatRadarRepository extends UserStatRadarRepository {
@@ -95,6 +107,7 @@ class MetaGameServiceTest {
         metaGameService.userStatRadarRepository = stubUserStatRadarRepository;
         metaGameService.userPuzzlePieceRepository = stubUserPuzzlePieceRepository;
         metaGameService.userRepository = stubUserRepository;
+        metaGameService.userAchievementRepository = new StubUserAchievementRepository();
     }
 
     @Test
@@ -114,6 +127,7 @@ class MetaGameServiceTest {
             rounds.add(round);
         }
 
+        user.setFragmentBalance(6);
         stubGameRoundRepository.history = rounds;
         stubUserPuzzlePieceRepository.pieceCount = 6L;
         stubUserPuzzlePieceRepository.recentCount = 2L;
@@ -131,8 +145,8 @@ class MetaGameServiceTest {
         // Boosters: all 30 rounds chosen (5.0) + all activated (5.0) = 10.0
         assertEquals(10.0, result.getBoosters());
 
-        // Collector: 6/9 * 7.0 (~4.66) + 2.0 recent = ~6.7
-        assertTrue(result.getCollector() >= 6.0 && result.getCollector() <= 7.0);
+        // Collector: 6/10 * 7.0 (4.2) + 2.0 recent = 6.2
+        assertEquals(6.2, result.getCollector());
 
         // Generosity: bet 50 -> 5.0
         assertEquals(5.0, result.getGenerosity());
@@ -148,6 +162,7 @@ class MetaGameServiceTest {
     void testGetStatRadarForNewUserWithZeroGames() {
         User user = new User("newbie", "newbie@example.com", "hash");
         user.setId(101L);
+        user.setFragmentBalance(0);
 
         stubUserRepository.user = user;
         stubGameRoundRepository.completedCount = 0L;
@@ -164,5 +179,19 @@ class MetaGameServiceTest {
         assertEquals(0, dto.gamesAnalyzed());
         assertEquals(0L, dto.totalGames());
         assertEquals(10, dto.nextRecalcIn());
+    }
+
+    @Test
+    void testGetProfileReturnsPuzzleListMatchingFragmentBalance() {
+        User user = new User("player", "player@example.com", "hash");
+        user.setId(200L);
+        user.setFragmentBalance(6);
+        stubUserRepository.user = user;
+
+        var profile = metaGameService.getProfile(200L);
+        assertNotNull(profile);
+        assertEquals(10, profile.puzzleTotal());
+        assertEquals(6, profile.puzzle().size());
+        assertEquals(List.of("piece_1", "piece_2", "piece_3", "piece_4", "piece_5", "piece_6"), profile.puzzle());
     }
 }

@@ -62,6 +62,9 @@ public class GameResource {
     @Inject
     com.hack2026.mog.services.UserService userService;
 
+    @Inject
+    com.hack2026.mog.services.GameConfigService gameConfigService;
+
     @POST
     @Path("/start")
     @Authenticated
@@ -234,5 +237,13 @@ public class GameResource {
         Long userId = securityService.getCurrentUserId();
         com.hack2026.mog.dto.TopUpBalanceResponse response = userService.topUpBalance(userId, request != null ? request.amount() : null);
         return Response.ok(response).build();
+    }
+
+    @GET
+    @Path("/boosters")
+    @RunOnVirtualThread
+    @Operation(summary = "Получить доступные бустеры и их стоимость", description = "Возвращает список доступных бустеров по тирам с множителями и стоимостью во фрагментах")
+    public Response getBoosters() {
+        return Response.ok(gameConfigService.getBoosterPricing()).build();
     }
 }

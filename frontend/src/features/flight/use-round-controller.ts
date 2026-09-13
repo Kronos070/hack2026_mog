@@ -22,6 +22,12 @@ export function useRoundController() {
   const pushAchievements = useAchievementStore((state) => state.push);
   const { phase, round, result, startRound, finishRound, resetToIdle } = useRoundStore();
 
+  const autoCashout2x = useSessionStore((state) => state.autoCashout2x);
+  const autoCashout2xRef = useRef(autoCashout2x);
+  const canCashoutRef = useRef(false);
+  const cashedOutRef = useRef(false);
+  const autoCashoutTriggeredRef = useRef(false);
+
   const [canCashout, setCanCashout] = useState(false);
   const [cashedOut, setCashedOut] = useState(false);
   const [boosterHit, setBoosterHit] = useState(false);
@@ -46,6 +52,7 @@ export function useRoundController() {
     // Разблокировка вывода после преодоления 1-го уровня по CASE.md
     if (level >= 1) {
       setCanCashout(true);
+      canCashoutRef.current = true;
     }
   }, []);
 
@@ -55,7 +62,10 @@ export function useRoundController() {
     toast.success('Бустер активирован!');
   }, []);
 
+  const cashoutRefCallback = useRef<(isAuto?: boolean) => Promise<void>>(() => Promise.resolve());
+
   const handleCrash = useCallback(() => {
+    canCashoutRef.current = false;
     void api
       .finishRound(boosterRef.current)
       .then(async (roundResult) => {
@@ -72,6 +82,7 @@ export function useRoundController() {
 
   const handleSocketCrash = useCallback(
     (message: SocketMessage) => {
+      canCashoutRef.current = false;
       const active = useRoundStore.getState().round;
       if (!active) return;
       const roundResult = buildRoundResult(active, message, cashoutRef.current);
@@ -96,10 +107,24 @@ export function useRoundController() {
     [pushAchievements],
   );
 
+  const handleTick = useCallback((multiplier: number) => {
+    if (
+      autoCashout2xRef.current &&
+      !autoCashoutTriggeredRef.current &&
+      multiplier >= 2.0 &&
+      canCashoutRef.current &&
+      !cashedOutRef.current
+    ) {
+      autoCashoutTriggeredRef.current = true;
+      void cashoutRefCallback.current(true);
+    }
+  }, []);
+
   const localFlight = useFlightEngine(api.isMock ? round : null, config, {
     onLevel: handleLevel,
     onBooster: handleBooster,
     onCrash: handleCrash,
+    onTick: handleTick,
   });
 
   const socketFlight = useSocketFlight(api.isMock ? null : round, {
@@ -107,6 +132,7 @@ export function useRoundController() {
     onBooster: handleBooster,
     onCrash: handleSocketCrash,
     onCashout: handleSocketCashout,
+    onTick: handleTick,
   });
 
   const getSnapshot = api.isMock ? localFlight.getSnapshot : socketFlight.getSnapshot;
@@ -119,7 +145,10 @@ export function useRoundController() {
       try {
         const started = await api.startRound({ theme, cost, boosterTier });
         setCanCashout(false);
+        canCashoutRef.current = false;
         setCashedOut(false);
+        cashedOutRef.current = false;
+        autoCashoutTriggeredRef.current = false;
         setBoosterHit(false);
         boosterRef.current = false;
         cashoutRef.current = null;
@@ -135,20 +164,47 @@ export function useRoundController() {
     [startRound, refreshUser, queryClient],
   );
 
-  const cashout = useCallback(async (): Promise<void> => {
-    if (cashedOut || !canCashout) return;
-    const { multiplier } = getSnapshot();
-    markCashout();
-    setCashedOut(true);
-    try {
-      const payout = await api.cashout(multiplier, boosterRef.current, round?.roundId);
-      cashoutRef.current = payout.multiplier;
-      soundManager.play('cashout', 0.8);
-      toast.success(`Забрано ${payout.payout} бонусов · могли бы забрать больше`);
-    } catch {
-      toast.error('Не удалось зафиксировать выигрыш');
+  const cashout = useCallback(
+    async (isAuto = false): Promise<void> => {
+      if (cashedOutRef.current || !canCashoutRef.current) return;
+      cashedOutRef.current = true;
+      const { multiplier } = getSnapshot();
+      markCashout();
+      setCashedOut(true);
+      try {
+        const payout = await api.cashout(multiplier, boosterRef.current, round?.roundId);
+        cashoutRef.current = payout.multiplier;
+        soundManager.play('cashout', 0.8);
+        if (isAuto) {
+          toast.success(`Автовывод x2: забрано ${payout.payout} бонусов`);
+        } else {
+          toast.success(`Забрано ${payout.payout} бонусов · могли бы забрать больше`);
+        }
+      } catch {
+        toast.error('Не удалось зафиксировать выигрыш');
+      }
+    },
+    [getSnapshot, markCashout, round],
+  );
+
+  cashoutRefCallback.current = cashout;
+
+  useEffect(() => {
+    autoCashout2xRef.current = autoCashout2x;
+    if (
+      autoCashout2x &&
+      phase === 'flying' &&
+      !autoCashoutTriggeredRef.current &&
+      canCashoutRef.current &&
+      !cashedOutRef.current
+    ) {
+      const { multiplier } = getSnapshot();
+      if (multiplier >= 2.0) {
+        autoCashoutTriggeredRef.current = true;
+        void cashout(true);
+      }
     }
-  }, [cashedOut, canCashout, getSnapshot, markCashout, round]);
+  }, [autoCashout2x, phase, cashout, getSnapshot]);
 
   return {
     phase,

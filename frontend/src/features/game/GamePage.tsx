@@ -21,8 +21,17 @@ import { FlightOverlay } from '@/features/flight/FlightOverlay';
 import { ResultModal } from '@/features/results/ResultModal';
 
 export function GamePage() {
-  // Управляет всеми фазами раунда в пределах одного экрана
-  const { user, theme, betCost, boosterTier, lastBet, setBet, rememberBet } = useSessionStore();
+  const {
+    user,
+    theme,
+    betCost,
+    boosterTier,
+    lastBet,
+    autoCashout2x,
+    setBet,
+    rememberBet,
+    toggleAutoCashout2x,
+  } = useSessionStore();
   const historyRef = useSnapRows<HTMLDivElement>();
 
   const controller = useRoundController();
@@ -147,6 +156,7 @@ export function GamePage() {
             canCashout={controller.canCashout}
             cashedOut={controller.cashedOut}
             hasLastBet={lastBet !== null}
+            autoCashout2x={autoCashout2x}
             onStart={() => startRound(betCost, boosterTier)}
             onCashout={() => void controller.cashout()}
             onRepeat={() => {
@@ -157,11 +167,7 @@ export function GamePage() {
               setBet(cost, tier);
               startRound(cost, tier);
             }}
-            onExpress={() => {
-              const cost = betCost >= 1 ? betCost : Math.min(25, balance);
-              setBet(cost, boosterTier);
-              startRound(cost, boosterTier);
-            }}
+            onToggleAutoCashout={toggleAutoCashout2x}
           />
         </>
       }

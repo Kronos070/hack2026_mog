@@ -124,7 +124,7 @@ export class SceneRenderer {
       const beyond = index >= count;
       const value = beyond ? last * Math.pow(ratio, index - count + 1) : (levels[index] ?? 1);
       const passed = beyond
-        ? (snapshot?.baseMultiplier ?? 0) >= value
+        ? (snapshot?.multiplier ?? 0) >= value
         : (snapshot?.levelsPassed ?? 0) > index;
 
       ctx.strokeStyle = passed ? 'rgba(245, 179, 36, 0.9)' : 'rgba(255, 255, 255, 0.35)';

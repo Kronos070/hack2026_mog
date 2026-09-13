@@ -31,12 +31,16 @@ export function GamePage() {
   const { data: allHistory = [] } = useQuery({
     queryKey: ['history'],
     queryFn: () => api.getHistory(),
+    refetchInterval: 3000,
   });
 
   // Запись появляется только когда раунд действительно завершён
   const history = useMemo(
-    () => allHistory.filter((entry) => entry.roundId !== round?.roundId),
-    [allHistory, round?.roundId],
+    () =>
+      allHistory.filter((entry) =>
+        phase === 'flying' && round ? entry.roundId !== round.roundId : true,
+      ),
+    [allHistory, round, phase],
   );
 
   const balance = user?.balance ?? 0;

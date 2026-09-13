@@ -7,6 +7,7 @@ import { useRoundStore } from '@/entities/game/round-store';
 import { useSoundStore } from '@/entities/game/sound-store';
 import { cn } from '@/shared/lib/cn';
 import { MobileNav } from '@/shared/ui/MobileNav';
+import { api } from '@/shared/api/client';
 
 export function AppHeader() {
   // Показывает навигацию игрового экрана, блокируя переходы во время полёта
@@ -18,13 +19,14 @@ export function AppHeader() {
   const toggleMuted = useSoundStore((state) => state.toggle);
 
   const logout = (): void => {
+    void api.logout();
     setUser(null);
     navigate('/');
   };
 
   const links = [
     { label: 'Профиль', action: () => navigate('/profile') },
-    { label: 'Активы', action: () => navigate('/achievements') },
+    { label: 'Достижения', action: () => navigate('/achievements') },
     { label: 'Правила', action: () => navigate('/rules') },
     { label: 'Рейтинг', action: () => navigate('/leaderboard') },
   ];

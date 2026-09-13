@@ -19,7 +19,7 @@ export function mockLogin(userId: string): User {
   const state = updateState((draft) => {
     draft.currentUserId = userId;
   });
-  const user = state.users[userId];
+  const user = state.users[userId] ?? state.users['user'];
   if (!user) throw new Error('Пользователь не найден');
   return user;
 }
@@ -117,7 +117,44 @@ export function mockSaveConfig(config: GameConfig): GameConfig {
   return config;
 }
 
+let botSimTimer: ReturnType<typeof setInterval> | null = null;
+
+export function ensureBotHistorySimulation(): void {
+  if (botSimTimer || typeof window === 'undefined') return;
+  botSimTimer = setInterval(() => {
+    try {
+      const bots = BOT_PROFILES;
+      const bot = bots[Math.floor(Math.random() * bots.length)];
+      if (!bot) return;
+
+      const multipliers = [1.22, 1.48, 1.95, 2.34, 3.12, 4.65, 1.08, 2.05, 5.8];
+      const mult = multipliers[Math.floor(Math.random() * multipliers.length)] ?? 1.5;
+      const cashedOut = Math.random() > 0.35;
+      const betCost = [25, 50, 75, 100, 150, 200][Math.floor(Math.random() * 6)] ?? 50;
+      const cashoutMult = cashedOut ? Math.round((1 + (mult - 1) * 0.8) * 100) / 100 : null;
+      const payout = cashoutMult ? Math.round(betCost * cashoutMult) : 0;
+
+      updateState((draft) => {
+        draft.history.unshift({
+          roundId: `bot-round-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          playerName: bot.name,
+          theme: 'green',
+          betCost,
+          crashMultiplier: mult,
+          cashoutMultiplier: cashoutMult,
+          payout,
+          finishedAt: Date.now(),
+        });
+        draft.history = draft.history.slice(0, 50);
+      });
+    } catch {
+      // ignore
+    }
+  }, 10000);
+}
+
 export function mockGetHistory(): HistoryEntry[] {
+  ensureBotHistorySimulation();
   return readState().history.slice(0, 20);
 }
 
@@ -130,4 +167,5 @@ export function mockGetLeaderboard(): LeaderboardEntry[] {
   }
   return entries.sort((left, right) => right.points - left.points);
 }
+
 

@@ -1,6 +1,7 @@
 // Уведомление о новых достижениях: появляется сверху по центру
 import { useEffect } from 'react';
 import { useAchievementStore } from '@/entities/game/achievement-store';
+import { getAchievementIcon } from '@/shared/config/achievements';
 import { cn } from '@/shared/lib/cn';
 
 const VISIBLE_MS = 7000;
@@ -26,18 +27,23 @@ export function AchievementToast() {
           onClick={clear}
           style={{ animationDelay: `${index * 90}ms` }}
           className={cn(
-            'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-lg',
-            'border-2 border-gold bg-paper p-3 text-left shadow-lg',
+            'pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl',
+            'border-2 border-accent/80 bg-sky-deep/90 backdrop-blur-md p-3 text-left shadow-[0_8px_25px_rgba(0,0,0,0.4)]',
             'animate-[achievement-in_0.35s_ease-out_both]',
           )}
         >
-          <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-gold text-lg font-bold text-ink">
-            {achievement.letter}
-          </span>
+          <img
+            src={getAchievementIcon(achievement.id)}
+            alt={achievement.title}
+            draggable={false}
+            className="size-12 shrink-0 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] select-none"
+          />
           <span className="min-w-0">
-            <span className="block text-xs font-semibold text-gold">Достижение получено</span>
-            <span className="block truncate font-semibold">{achievement.title}</span>
-            <span className="block truncate text-xs text-muted">{achievement.description}</span>
+            <span className="block text-xs font-bold text-accent tracking-wide uppercase">
+              Достижение получено!
+            </span>
+            <span className="block truncate font-bold text-on-glass">{achievement.title}</span>
+            <span className="block truncate text-xs text-on-glass-dim/80">{achievement.description}</span>
           </span>
         </button>
       ))}

@@ -1,6 +1,7 @@
 // Панель действий: повтор и экспресс-ставка над главной кнопкой раунда
 
 import { Button } from '@/shared/ui/Button';
+import { soundManager } from '@/shared/lib/sound-manager';
 
 interface ActionBarProps {
   flying: boolean;
@@ -34,7 +35,10 @@ export function ActionBar({
         <Button
           variant="glass"
           disabled={flying || !hasLastBet}
-          onClick={onRepeat}
+          onClick={() => {
+            soundManager.play('select', 0.5);
+            onRepeat();
+          }}
           className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
         >
           Повторить ставку
@@ -42,7 +46,10 @@ export function ActionBar({
         <Button
           variant="glass"
           disabled={flying}
-          onClick={onExpress}
+          onClick={() => {
+            soundManager.play('select', 0.5);
+            onExpress();
+          }}
           className="whitespace-nowrap rounded-full border border-glass-line/50 bg-sky-deep/[0.65] px-3 py-5 text-lg font-semibold text-on-glass backdrop-blur-md hover:bg-sky-deep"
         >
           Экспресс-ставка

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RoundResult } from '@/shared/api/contract';
 import { SkyDecor } from '@/features/home/SkyDecor';
 import { RewardList } from '@/features/results/RewardList';
+import { soundManager } from '@/shared/lib/sound-manager';
 
 const EXIT_MS = 340;
 
@@ -23,10 +24,13 @@ export function ResultModal({ result, onClose }: ResultModalProps) {
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
+    if (won) {
+      soundManager.play('win', 0.9);
+    }
     return () => {
       if (exitTimer.current !== null) window.clearTimeout(exitTimer.current);
     };
-  }, []);
+  }, [won]);
 
   const requestClose = useCallback(() => {
     setClosing((already) => {

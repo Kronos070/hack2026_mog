@@ -3,6 +3,7 @@
 import { Plus } from 'lucide-react';
 import { BET_PRESETS } from '@/shared/config/default-config';
 import { cn } from '@/shared/lib/cn';
+import { soundManager } from '@/shared/lib/sound-manager';
 
 interface BetAmountFieldProps {
   value: number;
@@ -50,7 +51,10 @@ export function BetAmountField({
         <button
           type="button"
           disabled={disabled || value + STEP > balance}
-          onClick={() => onChange(Math.min(value + STEP, balance))}
+          onClick={() => {
+            soundManager.play('select', 0.4);
+            onChange(Math.min(value + STEP, balance));
+          }}
           aria-label="Увеличить ставку"
           className="glass-tile shrink-0 rounded-lg p-2 text-on-glass transition-opacity hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -63,7 +67,10 @@ export function BetAmountField({
           <button
             key={preset}
             disabled={disabled || preset > balance}
-            onClick={() => onChange(preset)}
+            onClick={() => {
+              soundManager.play('select', 0.4);
+              onChange(preset);
+            }}
             className="glass-tile flex-1 rounded-lg px-1 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {preset}
@@ -71,7 +78,10 @@ export function BetAmountField({
         ))}
         <button
           disabled={disabled || balance < 1}
-          onClick={() => onChange(balance)}
+          onClick={() => {
+            soundManager.play('select', 0.4);
+            onChange(balance);
+          }}
           className="glass-tile shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-on-glass transition-all hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Весь баланс

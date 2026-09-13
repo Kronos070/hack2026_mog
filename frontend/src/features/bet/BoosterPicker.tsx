@@ -2,6 +2,7 @@
 
 import type { BoosterTier } from '@/shared/api/contract';
 import { cn } from '@/shared/lib/cn';
+import { soundManager } from '@/shared/lib/sound-manager';
 
 interface BoosterPickerProps {
   value: BoosterTier;
@@ -28,7 +29,10 @@ export function BoosterPicker({
           <button
             key={tier}
             disabled={disabled}
-            onClick={() => onChange(tier)}
+            onClick={() => {
+              soundManager.play('select', 0.5);
+              onChange(tier);
+            }}
             aria-pressed={active}
             className={cn(
               'flex flex-col items-center gap-2 rounded-xl px-2 py-3 transition-all disabled:cursor-not-allowed',

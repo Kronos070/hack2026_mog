@@ -53,7 +53,9 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     let hasReceivedServerTick = false;
     let animationFrameId = 0;
     let isFinished = false;
+    let lastMultiplier = 1;
     const clientStartTime = performance.now();
+    soundManager.startFlightSound();
 
     // Цикл клиентского предсказания (60 FPS через rAF):
     // шарик плавно взлетает с первой миллисекунды, не дожидаясь пинга первого тика
@@ -85,14 +87,19 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       state.multiplier = displayMultiplier;
       state.baseMultiplier = baseMultiplier;
 
+      const currentFloor = Math.floor(displayMultiplier);
+      if (currentFloor > lastMultiplier) {
+        const nextTarget =
+          currentFloor - lastMultiplier > 1 ? currentFloor : lastMultiplier + 1;
+        soundManager.playMultiplier(nextTarget);
+        lastMultiplier = currentFloor;
+      }
+
       // Проверка прохождения уровней (по актуальному множителю полета шара)
       const passed = levelsPassedAt(displayMultiplier, round.levelMultipliers);
       if (passed > state.levelsPassed) {
         for (let level = state.levelsPassed + 1; level <= passed; level += 1) {
           handlers.current.onLevel(level);
-          if (!state.boosterActivated || passed - state.levelsPassed <= 1) {
-            soundManager.play('level-up', 0.5);
-          }
         }
         state.levelsPassed = passed;
       }
@@ -134,6 +141,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       }
 
       if (message.type === 'CASHOUT') {
+        soundManager.stopFlightSound();
         handlers.current.onCashout(message);
         return;
       }
@@ -141,6 +149,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
       if (message.type === 'CRASHED') {
         isFinished = true;
         cancelAnimationFrame(animationFrameId);
+        soundManager.stopFlightSound();
 
         state.crashed = true;
         const crashMult = typeof message.crashMultiplier === 'number'
@@ -171,6 +180,7 @@ export function useSocketFlight(round: RoundStart | null, callbacks: SocketFligh
     return () => {
       isFinished = true;
       cancelAnimationFrame(animationFrameId);
+      soundManager.stopFlightSound();
       unsubscribe();
     };
   }, [round]);

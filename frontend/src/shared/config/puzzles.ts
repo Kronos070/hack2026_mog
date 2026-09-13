@@ -14,15 +14,16 @@ export interface PuzzlePieceMeta {
  * Извлекает порядковый номер фрагмента (1..25) из id, имени или индекса
  */
 export function parsePieceNumber(pieceIdOrIndex: string | number | undefined | null): number {
-  if (pieceIdOrIndex === undefined || pieceIdOrIndex === null) return 1;
+  if (pieceIdOrIndex === undefined || pieceIdOrIndex === null) return 0;
 
   if (typeof pieceIdOrIndex === 'number') {
     if (pieceIdOrIndex >= 1 && pieceIdOrIndex <= PUZZLE_MAX_PIECES) return pieceIdOrIndex;
     if (pieceIdOrIndex >= 0 && pieceIdOrIndex < PUZZLE_MAX_PIECES) return pieceIdOrIndex + 1;
-    return 1;
+    return 0;
   }
 
-  const str = String(pieceIdOrIndex).trim();
+  const str = String(pieceIdOrIndex).trim().toLowerCase();
+  if (str === 'none' || str === 'completed' || str === '') return 0;
 
   // Регулярка для piece_3, piece-3, piece3, piece_03
   const match = str.match(/(?:piece[_-]?)(\d+)/i);
@@ -39,7 +40,7 @@ export function parsePieceNumber(pieceIdOrIndex: string | number | undefined | n
     return directNum;
   }
 
-  return 1;
+  return 0;
 }
 
 /**
@@ -47,7 +48,8 @@ export function parsePieceNumber(pieceIdOrIndex: string | number | undefined | n
  */
 export function getPuzzlePieceSrc(pieceIdOrIndex: string | number | undefined | null): string {
   const num = parsePieceNumber(pieceIdOrIndex);
-  return `/images/puzzles/piece_${num}.png`;
+  const safeNum = num >= 1 && num <= PUZZLE_MAX_PIECES ? num : 1;
+  return `/images/puzzles/piece_${safeNum}.png`;
 }
 
 /**
@@ -55,6 +57,7 @@ export function getPuzzlePieceSrc(pieceIdOrIndex: string | number | undefined | 
  */
 export function getPuzzlePieceLabel(pieceIdOrIndex: string | number | undefined | null): string {
   const num = parsePieceNumber(pieceIdOrIndex);
+  if (num <= 0) return 'Без фрагмента';
   return `Фрагмент ${num}`;
 }
 
@@ -68,13 +71,16 @@ export function isPieceCollected(
   if (!collectedList || collectedList.length === 0) return false;
 
   const num = parsePieceNumber(pieceIdOrIndex);
+  if (num <= 0) return false;
+
   const targetId = `piece_${num}`;
   const hyphenId = `piece-${num}`;
   const numStr = String(num);
 
   return collectedList.some((item) => {
     if (!item) return false;
-    const clean = String(item).trim();
+    const clean = String(item).trim().toLowerCase();
+    if (clean === 'none' || clean === 'completed') return false;
     if (clean === targetId || clean === hyphenId || clean === numStr) return true;
     const parsed = parsePieceNumber(clean);
     return parsed === num;

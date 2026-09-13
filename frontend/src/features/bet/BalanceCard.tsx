@@ -8,7 +8,7 @@ interface BalanceCardProps {
   totalFragments?: number;
 }
 
-export function BalanceCard({ balance, fragments = 6, totalFragments = 10 }: BalanceCardProps) {
+export function BalanceCard({ balance, fragments = 0, totalFragments = 10 }: BalanceCardProps) {
   // Показывает текущий баланс бонусов и пазлов в одну строку
   return (
     <GlassPanel title="Баланс" className="flex flex-col justify-center">

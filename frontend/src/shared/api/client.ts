@@ -44,6 +44,7 @@ import { clearToken, saveToken } from '@/shared/api/auth-token';
 import { http, USE_MOCK } from '@/shared/api/http';
 import { buildLevelMultipliers } from '@/shared/lib/crash-math';
 import { DEFAULT_CONFIG } from '@/shared/config/default-config';
+import { getPuzzlePieceLabel } from '@/shared/config/puzzles';
 import { disconnectGameSocket } from '@/features/flight/game-socket';
 import * as mock from '@/shared/api/mock-server';
 
@@ -118,11 +119,22 @@ export const api = {
     if (USE_MOCK) return mock.mockCashout(multiplier, boosterActivated);
     const { data } = await http.post('/game/cashout', { roundId });
     const parsed = cashoutResponseSchema.parse(data);
+    const reward =
+      parsed.reward && parsed.reward.pieceId
+        ? {
+            kind: 'puzzle-piece' as const,
+            pieceId: parsed.reward.pieceId,
+            label: parsed.reward.label ?? getPuzzlePieceLabel(parsed.reward.pieceId),
+            collected: parsed.reward.collected ?? 0,
+            total: parsed.reward.total ?? 10,
+          }
+        : null;
     return {
       roundId: parsed.roundId,
       multiplier: parsed.multiplier,
       payout: parsed.winAmount,
       balance: parsed.newBalance,
+      reward,
     };
   },
 

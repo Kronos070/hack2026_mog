@@ -47,7 +47,7 @@ export function GamePage() {
     queryKey: ['profile'],
     queryFn: () => api.getProfile(),
   });
-  const fragmentBalance = profile?.puzzle?.length ?? 6;
+  const fragmentBalance = profile?.puzzle?.length ?? 0;
   const totalFragments = profile?.puzzleTotal ?? 10;
 
   const { data: boosterPricing = [] } = useQuery({

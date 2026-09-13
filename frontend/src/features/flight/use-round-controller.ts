@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/shared/api/client';
-import type { BoosterTier, Theme } from '@/shared/api/contract';
+import type { BoosterTier, Reward, Theme } from '@/shared/api/contract';
+import { getPuzzlePieceLabel } from '@/shared/config/puzzles';
 import { useRoundStore } from '@/entities/game/round-store';
 import { useSessionStore } from '@/entities/game/session-store';
 import { useAchievementStore } from '@/entities/game/achievement-store';
@@ -34,6 +35,7 @@ export function useRoundController() {
   const [starting, setStarting] = useState(false);
   const boosterRef = useRef(false);
   const cashoutRef = useRef<number | null>(null);
+  const cashoutRewardRef = useRef<Reward | null>(null);
 
   const { data: config } = useQuery({ queryKey: ['config'], queryFn: () => api.getConfig() });
 
@@ -85,7 +87,12 @@ export function useRoundController() {
       canCashoutRef.current = false;
       const active = useRoundStore.getState().round;
       if (!active) return;
-      const roundResult = buildRoundResult(active, message, cashoutRef.current);
+      const roundResult = buildRoundResult(
+        active,
+        message,
+        cashoutRef.current,
+        cashoutRewardRef.current,
+      );
       finishRound(roundResult);
       if (roundResult.unlockedAchievements.length > 0) {
         pushAchievements(roundResult.unlockedAchievements);
@@ -100,6 +107,15 @@ export function useRoundController() {
   const handleSocketCashout = useCallback(
     (message: SocketMessage) => {
       if (typeof message.multiplier === 'number') cashoutRef.current = message.multiplier;
+      if (message.reward && message.reward.pieceId) {
+        cashoutRewardRef.current = {
+          kind: 'puzzle-piece',
+          pieceId: message.reward.pieceId,
+          label: message.reward.label ?? getPuzzlePieceLabel(message.reward.pieceId),
+          collected: message.reward.collected ?? 0,
+          total: message.reward.total ?? 10,
+        };
+      }
       if (message.unlockedAchievements && message.unlockedAchievements.length > 0) {
         pushAchievements(message.unlockedAchievements);
       }
@@ -152,6 +168,7 @@ export function useRoundController() {
         setBoosterHit(false);
         boosterRef.current = false;
         cashoutRef.current = null;
+        cashoutRewardRef.current = null;
         startRound(started);
         void refreshUser();
         void queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -174,6 +191,10 @@ export function useRoundController() {
       try {
         const payout = await api.cashout(multiplier, boosterRef.current, round?.roundId);
         cashoutRef.current = payout.multiplier;
+        if (payout.reward) {
+          cashoutRewardRef.current = payout.reward;
+        }
+        void queryClient.invalidateQueries({ queryKey: ['profile'] });
         soundManager.play('cashout', 0.8);
         if (isAuto) {
           toast.success(`Автовывод x2: забрано ${payout.payout} бонусов`);
@@ -184,7 +205,7 @@ export function useRoundController() {
         toast.error('Не удалось зафиксировать выигрыш');
       }
     },
-    [getSnapshot, markCashout, round],
+    [getSnapshot, markCashout, round, queryClient],
   );
 
   cashoutRefCallback.current = cashout;

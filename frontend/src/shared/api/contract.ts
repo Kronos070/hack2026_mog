@@ -52,19 +52,20 @@ export const roundStartSchema = z.object({
   balanceAfterBet: z.number().nonnegative(),
 });
 
-export const cashoutResultSchema = z.object({
-  roundId: z.string(),
-  multiplier: z.number().positive(),
-  payout: z.number().nonnegative(),
-  balance: z.number().nonnegative(),
-});
-
 export const rewardSchema = z.object({
   kind: z.literal('puzzle-piece'),
   pieceId: z.string(),
   label: z.string(),
   collected: z.number().int().nonnegative(),
   total: z.number().int().positive(),
+});
+
+export const cashoutResultSchema = z.object({
+  roundId: z.string(),
+  multiplier: z.number().positive(),
+  payout: z.number().nonnegative(),
+  balance: z.number().nonnegative(),
+  reward: rewardSchema.nullable().optional(),
 });
 
 export const achievementSchema = z.object({

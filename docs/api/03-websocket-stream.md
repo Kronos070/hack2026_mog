@@ -139,7 +139,7 @@ ws://localhost:8080/ws/game?token=<ваш_jwt_токен>
     "pieceId": "piece_3",
     "label": "Фрагмент 3",
     "collected": 3,
-    "total": 9
+    "total": 10
   },
   "unlockedAchievements": [
     {

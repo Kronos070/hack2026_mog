@@ -262,17 +262,30 @@ export const api = {
   },
 
   /**
-   * TODO: [UI отсутствует] Быстрое пополнение баланса бонусов для тестирования.
+   * Быстрое пополнение баланса бонусов для тестирования.
    * Зачем нужна: проверка игрового цикла и ставок при нехватке средств без ограничений.
-   * Эндпоинты бэкенда: POST /api/users/me/top-up или POST /api/users/{id}/top-up.
+   * Эндпоинты бэкенда: POST /api/top-up (алиасы: /api/game/top-up, /api/users/me/top-up).
    */
   async topUpBalance(amount = 1000, playerId?: string): Promise<TopUpResponse> {
     if (USE_MOCK) {
       return { userId: 1, username: 'player', addedAmount: amount, newBalance: 10000 };
     }
-    const url = playerId ? `/users/${playerId}/top-up` : '/users/me/top-up';
-    const { data } = await http.post(url, { amount });
-    return topUpResponseSchema.parse(data);
+    if (playerId) {
+      const { data } = await http.post(`/users/${playerId}/top-up`, { amount });
+      return topUpResponseSchema.parse(data);
+    }
+    try {
+      const { data } = await http.post('/top-up', { amount });
+      return topUpResponseSchema.parse(data);
+    } catch {
+      try {
+        const { data } = await http.post('/game/top-up', { amount });
+        return topUpResponseSchema.parse(data);
+      } catch {
+        const { data } = await http.post('/users/me/top-up', { amount });
+        return topUpResponseSchema.parse(data);
+      }
+    }
   },
 
   /**

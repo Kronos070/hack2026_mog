@@ -540,6 +540,25 @@ paths:
       responses:
         "200":
           description: OK
+  /api/top-up:
+    post:
+      summary: Быстрое пополнение баланса бонусов
+      description: Начисляет бонусные баллы на баланс текущего игрока без проверок (для тестирования)
+      tags:
+      - TopUp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopUpBalanceRequest"
+        required: false
+      responses:
+        "200":
+          description: Баланс успешно пополнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopUpBalanceResponse"
       security:
       - jwtAuth: []
   /api/game/top-up:

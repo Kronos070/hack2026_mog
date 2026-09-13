@@ -17,6 +17,7 @@ interface SessionState {
   setBet: (betCost: number, boosterTier: BoosterTier) => void;
   rememberBet: (cost: number, tier: BoosterTier) => void;
   toggleAutoCashout2x: () => void;
+  updateBalance: (balance: number) => void;
   markOnboardingSeen: () => void;
 }
 
@@ -35,6 +36,10 @@ export const useSessionStore = create<SessionState>()(
       setBet: (betCost, boosterTier) => set({ betCost, boosterTier }),
       rememberBet: (cost, tier) => set({ lastBet: { cost, tier } }),
       toggleAutoCashout2x: () => set((state) => ({ autoCashout2x: !state.autoCashout2x })),
+      updateBalance: (balance) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, balance } : null,
+        })),
       markOnboardingSeen: () => set({ onboardingSeen: true }),
     }),
     { name: 'balloon.session', version: 3 },

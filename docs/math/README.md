@@ -35,7 +35,7 @@ docs/math/
 | **Время краха** | $t_{crash} = \frac{\ln(crashMultiplier)}{\lambda}$ | Рассчитывается до взлета | [01-math-models.md#4.2](./01-math-models.md#42-аналитический-расчет-времени-полета-до-краха) |
 | **Размещение бустера** | $level = 2 + (|hash| \pmod{totalLevels - 3})$ | Зеленая: 2–7, Красная: 2–10 | [02-game-logic.md#3.2](./02-game-logic.md#32-детерминированное-размещение-бустера) |
 | **Очки за раунд** | $Points = (passedLevels \cdot 10) + 25[\text{WIN}] + 50[\text{Booster}]$ | Очки сохраняются при крахе! | [02-game-logic.md#4](./02-game-logic.md#-4-система-начисления-турнирных-очков-scoring) |
-| **Pity Timer пазлов** | $P_{drop} = \min(1.0, \; 0.30 + pity \cdot 0.20)$ | 100% гарантия за $\le 4$ раунда | [02-game-logic.md#5.1](./02-game-logic.md#51-коллекция-из-9-пазлов-и-pity-timer) |
+| **Pity Timer пазлов** | $P_{drop} = \min(1.0, \; 0.30 + pity \cdot 0.20)$ | 100% гарантия за $\le 4$ раунда | [02-game-logic.md#5.1](./02-game-logic.md#51-коллекция-из-10-пазлов-и-pity-timer) |
 
 ---
 

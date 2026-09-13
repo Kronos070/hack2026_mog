@@ -129,7 +129,7 @@ export function GamePage() {
       asideRight={
         <>
           <div className="grid gap-[clamp(0.5rem,1.4vw,1.25rem)] lg:grid-rows-[auto_minmax(min-content,1fr)]">
-            <div className="hidden lg:block">
+            <div className="block">
               <BalanceCard
                 balance={balance}
                 fragments={fragmentBalance}
